@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+
+import { Command } from 'commander';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { lintCommand } from './commands/lint.js';
+
+/**
+ * Main CLI entry point for cclint
+ */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+async function getPackageInfo() {
+  try {
+    const packagePath = join(__dirname, '../package.json');
+    const packageContent = await fs.readFile(packagePath, 'utf-8');
+    return JSON.parse(packageContent);
+  } catch {
+    return { name: 'cclint', version: '1.0.0', description: 'Claude Code Lint' };
+  }
+}
+
+export async function main(): Promise<void> {
+  const pkg = await getPackageInfo();
+  
+  const program = new Command()
+    .name(pkg.name)
+    .version(pkg.version)
+    .description(pkg.description || 'Claude Code Lint - A comprehensive linting tool for Claude Code projects');
+
+  // Main lint command
+  program
+    .command('lint', { isDefault: true })
+    .description('Lint Claude Code project files')
+    .option('-r, --root <path>', 'Project root directory (auto-detected if not specified)')
+    .option('-q, --quiet', 'Suppress non-essential output')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('-f, --format <format>', 'Output format for reports', 'console')
+    .option('-o, --output <file>', 'Output file for reports (requires --format)')
+    .option('--fail-on <level>', 'Fail build on specified level', 'error')
+    .option('--custom-schemas', 'Enable custom schema validation (default: true)')
+    .action(async (options) => {
+      await lintCommand({
+        root: options.root,
+        quiet: options.quiet,
+        verbose: options.verbose,
+        format: options.format as 'console' | 'json' | 'markdown',
+        outputFile: options.output,
+        failOn: options.failOn as 'error' | 'warning' | 'suggestion',
+        customSchemas: options.customSchemas !== false,
+      });
+    });
+
+  // Init command for future extension
+  program
+    .command('init')
+    .description('Initialize cclint configuration')
+    .action(() => {
+      console.log('Initialize command not yet implemented');
+      console.log('cclint works without configuration by auto-detecting project structure');
+    });
+
+  // Version command
+  program
+    .command('version')
+    .description('Show version information')
+    .action(() => {
+      console.log(`${pkg.name} v${pkg.version}`);
+    });
+
+  await program.parseAsync(process.argv);
+}
+
+// Handle uncaught errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Run CLI if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error('CLI Error:', error);
+    process.exit(1);
+  });
+}

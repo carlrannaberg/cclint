@@ -1,0 +1,30 @@
+{
+  "agentSchema": {
+    "extend": {
+      "priority": "number",
+      "tags": "array", 
+      "experimental": "boolean"
+    }
+  },
+  "commandSchema": {
+    "extend": {
+      "timeout": "number",
+      "retryCount": "number"
+    }
+  },
+  "claudeMdRules": {
+    "requiredSections": [
+      "project overview",
+      "setup instructions",
+      "testing"
+    ]
+  },
+  "rules": {
+    "unknownFields": "warning",
+    "strict": false,
+    "excludePatterns": [
+      "**/legacy/**",
+      "**/*.backup.*"
+    ]
+  }
+}
