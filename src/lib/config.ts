@@ -1,18 +1,21 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
+import { sanitizePath, PathSecurityError, isPathSafe } from './utils.js';
 import type { CclintConfig, CclintConfigExport } from '../types/index.js';
 
 /**
  * Configuration file names in order of precedence (first found wins)
+ * For security, we prioritize JSON files and restrict JS files
  */
 const CONFIG_FILES = [
-  'cclint.config.js',
-  'cclint.config.mjs', 
-  'cclint.config.ts',
-  '.cclintrc.json',
-  '.cclintrc.js',
-  '.cclintrc.mjs',
+  '.cclintrc.json',          // Safe JSON config (preferred)
+  'cclint.config.json',      // Safe JSON config  
+  'cclint.config.js',        // Restricted JS config
+  'cclint.config.mjs',       // Restricted JS config
+  '.cclintrc.js',            // Restricted JS config
+  '.cclintrc.mjs',           // Restricted JS config
+  // NOTE: TypeScript configs removed for security (prevent arbitrary code execution)
 ];
 
 /**
@@ -22,8 +25,36 @@ const configCache = new Map<string, CclintConfig | null>();
 
 /**
  * Load cclint configuration from project directory
+ * SECURITY: Enhanced path validation to prevent configuration injection attacks
  */
-export async function loadConfig(projectRoot: string): Promise<CclintConfig | null> {
+export async function loadConfig(projectRoot: string, options: { allowJs?: boolean } = {}): Promise<CclintConfig | null> {
+  // Basic input validation
+  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.includes('\0') || projectRoot.trim() === '') {
+    throw new Error(`Invalid project root path: contains unsafe characters or patterns`);
+  }
+  
+  const cleanPath = projectRoot.trim();
+  
+  // Check for obvious path traversal attacks
+  if (cleanPath.includes('..')) {
+    throw new Error(`Invalid project root path: potential security risk detected`);
+  }
+  
+  // Resolve to absolute path
+  const resolvedPath = path.resolve(cleanPath);
+  
+  // Enhanced security: block access to critical system directories
+  const dangerousSystemPaths = ['/etc/passwd', '/etc/shadow', '/etc/hosts', '/usr/bin', '/usr/sbin', '/sys', '/proc', '/dev', '/bin', '/sbin'];
+  const isDangerous = dangerousSystemPaths.some(dangerousPath => 
+    resolvedPath.startsWith(dangerousPath) || resolvedPath === dangerousPath
+  );
+  
+  if (isDangerous) {
+    throw new Error(`Invalid project root path: potential security risk detected`);
+  }
+  
+  projectRoot = resolvedPath;
+
   // Check cache first
   if (configCache.has(projectRoot)) {
     return configCache.get(projectRoot) || null;
@@ -33,6 +64,15 @@ export async function loadConfig(projectRoot: string): Promise<CclintConfig | nu
   for (const configFile of CONFIG_FILES) {
     const configPath = path.join(projectRoot, configFile);
     
+    // Security check: Ensure config file path is within project boundaries
+    const relativePath = path.relative(projectRoot, configPath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      if (process.env.CCLINT_VERBOSE) {
+        console.warn(`[SECURITY] Skipping config file outside project boundary: ${configFile}`);
+      }
+      continue;
+    }
+    
     try {
       const exists = await fs.access(configPath).then(() => true).catch(() => false);
       if (!exists) continue;
@@ -40,10 +80,26 @@ export async function loadConfig(projectRoot: string): Promise<CclintConfig | nu
       if (configFile.endsWith('.json')) {
         config = await loadJsonConfig(configPath);
       } else {
-        config = await loadJsConfig(configPath);
+        // Check if JS configs are disabled
+        if (options.allowJs === false) {
+          if (process.env.CCLINT_VERBOSE) {
+            console.warn(`[SECURITY] JavaScript configuration loading is disabled: ${configFile}`);
+          }
+          continue;
+        }
+        config = await loadJsConfig(configPath, projectRoot);
       }
       break; // Found config, stop looking
     } catch (error) {
+      // For security errors, log and return null (fail gracefully)
+      if (error instanceof Error && error.message.includes('[SECURITY]')) {
+        if (process.env.CCLINT_VERBOSE) {
+          console.warn(`Security validation failed for ${configFile}:`, error.message);
+        }
+        // Cache the null result for security failures
+        configCache.set(projectRoot, null);
+        return null;
+      }
       // Log error but continue trying other config files
       if (process.env.CCLINT_VERBOSE) {
         console.warn(`Failed to load config from ${configFile}:`, error);
@@ -72,19 +128,83 @@ async function loadJsonConfig(configPath: string): Promise<CclintConfig> {
 }
 
 /**
- * Load JavaScript/TypeScript configuration file
+ * Load JavaScript configuration file with enhanced security restrictions
+ * SECURITY: Multiple layers of protection against code execution attacks
+ * WARNING: This function executes user-provided JavaScript code and should only be used with trusted files
  */
-async function loadJsConfig(configPath: string): Promise<CclintConfig> {
+async function loadJsConfig(configPath: string, projectRoot: string): Promise<CclintConfig> {
+  // Enhanced security validation
+  const fileName = path.basename(configPath);
+  const configDir = path.dirname(configPath);
+  
+  // Verify the config file is exactly within the specified project root
+  const realConfigPath = await fs.realpath(configPath).catch(() => configPath);
+  const realProjectRoot = await fs.realpath(projectRoot).catch(() => projectRoot);
+  const relativePath = path.relative(realProjectRoot, realConfigPath);
+  
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`[SECURITY] Configuration file is outside project boundary: ${configPath}`);
+  }
+  
+  // Only allow specific config file names
+  if (!CONFIG_FILES.includes(fileName)) {
+    throw new Error(`[SECURITY] Invalid configuration file name: ${fileName}. Must be one of: ${CONFIG_FILES.join(', ')}`);
+  }
+  
+  // Additional file content security checks before execution
+  let fileContent: string;
+  try {
+    fileContent = await fs.readFile(configPath, 'utf-8');
+  } catch (error) {
+    throw new Error(`Failed to read configuration file: ${configPath}`);
+  }
+  
+  // Static analysis for obvious malicious patterns
+  const dangerousPatterns = [
+    /require\s*\(["'](?:child_process|fs|path|os|cluster)["']\)/,
+    /import.*["'](?:child_process|fs|path|os|cluster)["']/,
+    /process\s*\.\s*(?:exec|spawn|exit)/,
+    /eval\s*\(/,
+    /Function\s*\(/,
+    /global(?:This)?\.\w+\s*=/,
+    /\.__proto__/,
+    /\.constructor\s*\./
+  ];
+  
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(fileContent)) {
+      throw new Error(`[SECURITY] Configuration file contains potentially dangerous code pattern: ${configPath}`);
+    }
+  }
+
   // Convert to file URL for import()
   const fileUrl = pathToFileURL(configPath).href;
   
   try {
+    // SECURITY WARNING: Dynamic imports can execute arbitrary code
+    // Enhanced warnings and logging for security awareness
+    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.warn(`⚠️  [SECURITY WARNING] Loading JavaScript configuration file:`);
+    console.warn(`   File: ${configPath}`);
+    console.warn(`   This will execute arbitrary JavaScript code from the file.`);
+    console.warn(`   Ensure this file is from a trusted source and has not been tampered with.`);
+    console.warn(`   Consider using JSON configuration files (.cclintrc.json) for better security.`);
+    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    
     const module = await import(fileUrl);
     let config: CclintConfigExport = module.default || module;
     
-    // Handle function exports
+    // Handle function exports with timeout protection
     if (typeof config === 'function') {
-      config = await config();
+      const timeout = 5000; // 5 second timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Configuration function execution timeout')), timeout);
+      });
+      
+      config = await Promise.race([
+        Promise.resolve(config()),
+        timeoutPromise
+      ]) as CclintConfig;
     }
     
     // Validate result is an object
@@ -92,17 +212,97 @@ async function loadJsConfig(configPath: string): Promise<CclintConfig> {
       throw new Error('Configuration export must be an object or function returning an object');
     }
     
+    // Enhanced security validation with detailed error reporting
+    try {
+      validateConfigurationSafety(config);
+    } catch (error) {
+      throw new Error(`[SECURITY] Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
     return config as CclintConfig;
     
   } catch (error) {
-    // For TypeScript files, suggest using .js or building first
+    // For TypeScript files, suggest using .json instead
     if (configPath.endsWith('.ts')) {
       throw new Error(
-        `Failed to load TypeScript config file. Consider using cclint.config.js instead, or compile to JavaScript first.\nOriginal error: ${error}`
+        `TypeScript configuration files are not supported for security reasons. Please use a .json configuration file instead.\nOriginal error: ${error}`
       );
     }
     throw error;
   }
+}
+
+/**
+ * Validate that configuration object doesn't contain dangerous properties
+ * SECURITY: Prevents configuration from containing executable code or dangerous references
+ */
+function validateConfigurationSafety(config: unknown): void {
+  if (typeof config !== 'object' || config === null) {
+    return;
+  }
+
+  const dangerousKeys = [
+    '__proto__',
+    'constructor',
+    'prototype',
+    'eval',
+    'Function',
+    'require',
+    'import',
+    'process',
+    'global',
+    'globalThis',
+    'window',
+  ];
+
+  function checkObject(obj: Record<string, unknown>, path = ''): void {
+    // Check for dangerous properties using getOwnPropertyNames to catch __proto__
+    const ownPropertyNames = Object.getOwnPropertyNames(obj);
+    for (const propName of ownPropertyNames) {
+      if (dangerousKeys.includes(propName)) {
+        const currentPath = path ? `${path}.${propName}` : propName;
+        throw new Error(`Configuration contains dangerous property: ${currentPath}`);
+      }
+    }
+    
+    // Check if the prototype has been tampered with (security risk)
+    const proto = Object.getPrototypeOf(obj);
+    if (proto && proto !== Object.prototype && proto !== Array.prototype) {
+      // If the prototype is not the standard Object or Array prototype, it might have been tampered with
+      const protoKeys = Object.getOwnPropertyNames(proto);
+      if (protoKeys.some(key => !['constructor'].includes(key))) {
+        throw new Error(`Configuration contains suspicious prototype modification`);
+      }
+    }
+    
+    for (const [key, value] of Object.entries(obj)) {
+      const currentPath = path ? `${path}.${key}` : key;
+      
+      // Check for dangerous keys
+      if (dangerousKeys.includes(key)) {
+        throw new Error(`Configuration contains dangerous property: ${currentPath}`);
+      }
+      
+      // Check for functions (only allow specific known function types)
+      if (typeof value === 'function') {
+        // Only allow customValidation functions in schema contexts
+        const isCustomValidation = key === 'customValidation';
+        const isInSchemaContext = path.includes('Schema') || path.endsWith('Schema');
+        
+        if (!isCustomValidation || !isInSchemaContext) {
+          console.log(`DEBUG: Function validation failed - key: ${key}, path: ${path}, isCustomValidation: ${isCustomValidation}, isInSchemaContext: ${isInSchemaContext}`);
+          throw new Error(`Configuration contains unexpected function: ${currentPath}`);
+        }
+      }
+      
+      // Recursively check nested objects
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        checkObject(value as Record<string, unknown>, currentPath);
+      }
+    }
+  }
+
+  checkObject(config as Record<string, unknown>);
 }
 
 /**
@@ -182,6 +382,7 @@ export function validateConfig(config: CclintConfig): string[] {
  */
 export function mergeWithDefaults(config: CclintConfig): CclintConfig {
   return {
+    ...config,
     rules: {
       unknownFields: 'warning',
       strict: false,
@@ -194,19 +395,68 @@ export function mergeWithDefaults(config: CclintConfig): CclintConfig {
       recommendedSections: [],
       ...config.claudeMdRules,
     },
-    ...config,
   };
 }
 
 /**
- * Get configuration file path if it exists
+ * Get configuration file path if it exists with enhanced security validation
+ * SECURITY: Enhanced path validation to prevent directory traversal attacks
  */
 export async function findConfigFile(projectRoot: string): Promise<string | null> {
+  // Basic input validation
+  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.includes('\0') || projectRoot.trim() === '') {
+    throw new Error(`Invalid project root path: contains unsafe characters or patterns`);
+  }
+  
+  const cleanPath = projectRoot.trim();
+  
+  // Check for obvious path traversal attacks
+  if (cleanPath.includes('..')) {
+    throw new Error(`Invalid project root path: potential security risk detected`);
+  }
+  
+  // Resolve to absolute path
+  const resolvedPath = path.resolve(cleanPath);
+  
+  // Enhanced security: block access to critical system directories
+  const dangerousSystemPaths = ['/etc/passwd', '/etc/shadow', '/etc/hosts', '/usr/bin', '/usr/sbin', '/sys', '/proc', '/dev', '/bin', '/sbin'];
+  const isDangerous = dangerousSystemPaths.some(dangerousPath => 
+    resolvedPath.startsWith(dangerousPath) || resolvedPath === dangerousPath
+  );
+  
+  if (isDangerous) {
+    throw new Error(`Invalid project root path: potential security risk detected`);
+  }
+  
+  projectRoot = resolvedPath;
+
   for (const configFile of CONFIG_FILES) {
     const configPath = path.join(projectRoot, configFile);
+    
     const exists = await fs.access(configPath).then(() => true).catch(() => false);
     if (exists) {
-      return configPath;
+      // Security check: ensure the config file doesn't link outside the project directory
+      try {
+        const realConfigPath = await fs.realpath(configPath);
+        const realProjectRoot = await fs.realpath(projectRoot);
+        const relativePath = path.relative(realProjectRoot, realConfigPath);
+        
+        // If the real path is outside the project directory, skip this config file
+        if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+          if (process.env.CCLINT_VERBOSE) {
+            console.warn(`[SECURITY] Skipping config file that links outside project: ${configFile}`);
+          }
+          continue; // Skip this config file and try the next one
+        }
+        
+        return configPath;
+      } catch (error) {
+        // If we can't resolve the real path, skip this config file for security
+        if (process.env.CCLINT_VERBOSE) {
+          console.warn(`[SECURITY] Skipping config file due to path resolution error: ${configFile}`);
+        }
+        continue;
+      }
     }
   }
   return null;
