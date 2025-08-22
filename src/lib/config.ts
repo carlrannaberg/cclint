@@ -319,7 +319,9 @@ function validateConfigurationSafety(config: unknown): void {
         const isInSchemaContext = path.includes('Schema') || path.endsWith('Schema');
         
         if (!isCustomValidation || !isInSchemaContext) {
-          console.log(`DEBUG: Function validation failed - key: ${key}, path: ${path}, isCustomValidation: ${isCustomValidation}, isInSchemaContext: ${isInSchemaContext}`);
+          if (process.env.CCLINT_VERBOSE) {
+            console.warn(`[SECURITY] Function validation failed for ${currentPath}: Expected customValidation in schema context`);
+          }
           throw new Error(`Configuration contains unexpected function: ${currentPath}`);
         }
       }

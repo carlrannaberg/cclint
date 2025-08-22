@@ -320,7 +320,6 @@ export function shouldSkipFile(filePath: string, excludePatterns?: string[]): bo
     return false;
   }
   
-  const path = require('path');
   const relativePath = path.relative(process.cwd(), filePath);
   
   return excludePatterns.some(pattern => {
