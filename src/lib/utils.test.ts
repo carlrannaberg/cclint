@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { calculateSummary, shouldFailBuild, getExitCode, formatDuration, pluralize } from './utils.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { calculateSummary, shouldFailBuild, getExitCode, formatDuration, pluralize, sanitizePath, isPathSafe, PathSecurityError } from './utils.js';
 import type { LintResult } from '../types/index.js';
 
 describe('utils', () => {
@@ -130,6 +133,182 @@ describe('utils', () => {
       expect(pluralize(2, 'file')).toBe('2 files');
       expect(pluralize(1, 'child', 'children')).toBe('1 child');
       expect(pluralize(2, 'child', 'children')).toBe('2 children');
+    });
+  });
+
+  describe('Path Security Functions', () => {
+    let tempDir: string;
+    let testDir: string;
+    let outsideDir: string;
+
+    beforeEach(async () => {
+      // Create temporary directory structure for testing
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cclint-security-test-'));
+      testDir = path.join(tempDir, 'test-project');
+      // outsideDir should be completely outside tempDir for proper testing
+      outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cclint-outside-'));
+      
+      await fs.mkdir(testDir, { recursive: true });
+    });
+
+    afterEach(async () => {
+      // Clean up temp directories
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+        await fs.rm(outsideDir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    describe('sanitizePath', () => {
+      it('should accept valid paths within the allowed directory', async () => {
+        const validPath = path.join(testDir, 'subdirectory');
+        await fs.mkdir(validPath, { recursive: true });
+        
+        const result = await sanitizePath(validPath, tempDir);
+        expect(result).toBe(await fs.realpath(validPath));
+      });
+
+      it('should accept the allowed directory itself', async () => {
+        const result = await sanitizePath(testDir, tempDir);
+        expect(result).toBe(await fs.realpath(testDir));
+      });
+
+      it('should reject empty or invalid input', async () => {
+        await expect(sanitizePath('', tempDir)).rejects.toThrow(PathSecurityError);
+        await expect(sanitizePath('   ', tempDir)).rejects.toThrow(PathSecurityError);
+        await expect(sanitizePath(null as unknown as string, tempDir)).rejects.toThrow(PathSecurityError);
+        await expect(sanitizePath(undefined as unknown as string, tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should reject paths with null bytes', async () => {
+        await expect(sanitizePath('test\0dir', tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should reject path traversal attempts with ../', async () => {
+        await expect(sanitizePath('../../../etc/passwd', tempDir)).rejects.toThrow(PathSecurityError);
+        await expect(sanitizePath(path.join(testDir, '../outside'), tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should reject absolute paths outside allowed directory', async () => {
+        await expect(sanitizePath('/etc/passwd', tempDir)).rejects.toThrow(PathSecurityError);
+        await expect(sanitizePath(outsideDir, tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should reject non-existent paths', async () => {
+        const nonExistentPath = path.join(testDir, 'does-not-exist');
+        await expect(sanitizePath(nonExistentPath, tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should reject file paths (only directories allowed)', async () => {
+        const filePath = path.join(testDir, 'test.txt');
+        await fs.writeFile(filePath, 'test content');
+        
+        await expect(sanitizePath(filePath, tempDir)).rejects.toThrow(PathSecurityError);
+      });
+
+      it('should handle relative paths correctly', async () => {
+        const subDir = path.join(testDir, 'subdir');
+        await fs.mkdir(subDir, { recursive: true });
+        
+        // Test relative path resolution
+        const result = await sanitizePath('./subdir', testDir);
+        expect(result).toBe(await fs.realpath(subDir));
+      });
+
+      it('should detect symbolic link escapes', async () => {
+        const linkDir = path.join(testDir, 'link');
+        
+        try {
+          // Create symbolic link pointing outside allowed directory
+          await fs.symlink(outsideDir, linkDir);
+          
+          await expect(sanitizePath(linkDir, tempDir)).rejects.toThrow(PathSecurityError);
+        } catch (error) {
+          // Skip this test on systems that don't support symlinks
+          if ((error as NodeJS.ErrnoException).code === 'EPERM' || (error as NodeJS.ErrnoException).code === 'ENOTSUP') {
+            console.log('Skipping symlink test (not supported on this system)');
+            return;
+          }
+          throw error;
+        }
+      });
+
+      it('should allow safe symbolic links within allowed directory', async () => {
+        const targetDir = path.join(testDir, 'target');
+        const linkDir = path.join(testDir, 'link');
+        
+        try {
+          await fs.mkdir(targetDir);
+          await fs.symlink(targetDir, linkDir);
+          
+          const result = await sanitizePath(linkDir, tempDir);
+          expect(result).toBe(await fs.realpath(targetDir));
+        } catch (error) {
+          // Skip this test on systems that don't support symlinks
+          if ((error as NodeJS.ErrnoException).code === 'EPERM' || (error as NodeJS.ErrnoException).code === 'ENOTSUP') {
+            console.log('Skipping safe symlink test (not supported on this system)');
+            return;
+          }
+          throw error;
+        }
+      });
+
+      it('should use current working directory as default base path', async () => {
+        // Create a subdirectory in the current working directory
+        const cwd = process.cwd();
+        const subDir = path.join(cwd, 'test-subdir-' + Date.now());
+        await fs.mkdir(subDir);
+        
+        try {
+          const result = await sanitizePath(subDir);
+          expect(result).toBe(await fs.realpath(subDir));
+        } finally {
+          // Clean up
+          await fs.rmdir(subDir);
+        }
+      });
+    });
+
+    describe('isPathSafe', () => {
+      it('should return true for safe paths', () => {
+        expect(isPathSafe('subdir', testDir)).toBe(true);
+        expect(isPathSafe(path.join(testDir, 'subdir'), tempDir)).toBe(true);
+        expect(isPathSafe(testDir, tempDir)).toBe(true);
+      });
+
+      it('should return false for unsafe paths', () => {
+        expect(isPathSafe('../../../etc/passwd', testDir)).toBe(false);
+        expect(isPathSafe('/etc/passwd', testDir)).toBe(false);
+        expect(isPathSafe('', testDir)).toBe(false);
+        expect(isPathSafe('   ', testDir)).toBe(false);
+        expect(isPathSafe(null as unknown as string, testDir)).toBe(false);
+        expect(isPathSafe(undefined as unknown as string, testDir)).toBe(false);
+        expect(isPathSafe('test\0dir', testDir)).toBe(false);
+      });
+
+      it('should handle edge cases gracefully', () => {
+        expect(isPathSafe(123 as unknown as string, testDir)).toBe(false);
+        expect(isPathSafe({} as unknown as string, testDir)).toBe(false);
+        expect(isPathSafe([] as unknown as string, testDir)).toBe(false);
+      });
+
+      it('should use current working directory as default base path', () => {
+        const cwd = process.cwd();
+        expect(isPathSafe('./src', cwd)).toBe(true);
+        expect(isPathSafe('../../../etc', cwd)).toBe(false);
+      });
+    });
+
+    describe('PathSecurityError', () => {
+      it('should create error with proper properties', () => {
+        const error = new PathSecurityError('Test message', '/test/path');
+        expect(error.message).toBe('Test message');
+        expect(error.path).toBe('/test/path');
+        expect(error.name).toBe('PathSecurityError');
+        expect(error).toBeInstanceOf(Error);
+      });
     });
   });
 });

@@ -15,8 +15,6 @@ export class CommandsLinter extends BaseLinterImpl {
   description = 'Lint slash command definition files';
 
   async lint(projectRoot: string, options: LintOptions, projectInfo?: ProjectInfo): Promise<LintResult[]> {
-    const results: LintResult[] = [];
-    
     // Get project info with configuration (use passed projectInfo or detect)
     const info = projectInfo || await detectProjectInfo(projectRoot);
     
@@ -27,35 +25,19 @@ export class CommandsLinter extends BaseLinterImpl {
       path.join(projectRoot, 'commands'),
     ];
 
-    // Add custom include patterns if specified
-    if (info.cclintConfig?.rules?.includePatterns) {
-      for (const pattern of info.cclintConfig.rules.includePatterns) {
-        commandDirs.push(path.join(projectRoot, pattern));
+    // Find all markdown files in the command directories
+    const files = await this.findMarkdownFilesInDirectories(projectRoot, commandDirs, info.cclintConfig);
+    
+    // Lint each file using the common pattern with parallel processing support
+    return await this.lintFiles(
+      files, 
+      (file, config) => this.lintCommandFile(file, config), 
+      info.cclintConfig,
+      { 
+        parallel: options.parallel !== false, // Default to true unless explicitly disabled
+        concurrency: options.concurrency || 10 
       }
-    }
-
-    for (const commandDir of commandDirs) {
-      try {
-        const pattern = path.join(commandDir, '**/*.md');
-        const files = await glob(pattern);
-        
-        for (const file of files) {
-          // Skip excluded patterns
-          if (shouldSkipFile(file, info.cclintConfig?.rules?.excludePatterns)) {
-            continue;
-          }
-          
-          const result = await this.lintCommandFile(file, info.cclintConfig);
-          if (result) {
-            results.push(result);
-          }
-        }
-      } catch {
-        // Directory doesn't exist or isn't accessible
-      }
-    }
-
-    return results;
+    );
   }
 
   private async lintCommandFile(filePath: string, config?: CclintConfig): Promise<LintResult | null> {
@@ -133,24 +115,11 @@ export class CommandsLinter extends BaseLinterImpl {
     }
 
     // Run custom validation if configured
-    if (config?.commandSchema?.customValidation) {
-      try {
-        const customErrors = config.commandSchema.customValidation(frontmatter as FrontmatterData);
-        for (const error of customErrors) {
-          if (!result.customSchemaErrors) {
-            result.customSchemaErrors = [];
-          }
-          result.customSchemaErrors.push(error);
-          this.addError(result, `Custom validation: ${error}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.addError(result, `Custom validation failed: ${errorMessage}`);
-        if (process.env.CCLINT_VERBOSE) {
-          console.error(`Custom validation error in ${this.name}:`, error);
-        }
-      }
-    }
+    this.runCustomValidation(
+      frontmatter as FrontmatterData, 
+      result, 
+      config?.commandSchema?.customValidation
+    );
   }
 
   private validateAllowedTools(allowedTools: unknown, result: LintResult): void {

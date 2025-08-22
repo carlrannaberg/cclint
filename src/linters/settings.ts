@@ -100,24 +100,11 @@ export class SettingsLinter extends BaseLinterImpl {
     this.checkDeprecatedPatterns(settings, result);
 
     // Run custom validation if configured
-    if (config?.settingsSchema?.customValidation) {
-      try {
-        const customErrors = config.settingsSchema.customValidation(settings);
-        for (const error of customErrors) {
-          if (!result.customSchemaErrors) {
-            result.customSchemaErrors = [];
-          }
-          result.customSchemaErrors.push(error);
-          this.addError(result, `Custom validation: ${error}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.addError(result, `Custom validation failed: ${errorMessage}`);
-        if (process.env.CCLINT_VERBOSE) {
-          console.error(`Custom validation error in ${this.name}:`, error);
-        }
-      }
-    }
+    this.runCustomValidation(
+      settings, 
+      result, 
+      config?.settingsSchema?.customValidation
+    );
   }
 
   private validateHooksConfig(
@@ -216,7 +203,7 @@ export class SettingsLinter extends BaseLinterImpl {
       this.addWarning(result, `${path}: Unknown hook type '${hookObj.type}', expected 'command'`);
     }
 
-    if (!hookObj.command) {
+    if (hookObj.command === undefined) {
       this.addError(result, `${path}: Missing required field 'command'`);
     } else if (typeof hookObj.command === 'string') {
       this.validateCommand(hookObj.command, path, result);

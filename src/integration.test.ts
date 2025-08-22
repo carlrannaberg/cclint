@@ -47,9 +47,9 @@ describe('Schema Integration Tests', () => {
       const schema = getCommandSchema(config);
       
       const validData = {
-        name: 'test-command',
+        'allowed-tools': 'bash',
         description: 'Test command',
-        tools: 'bash',
+        model: 'opus',
         customCommandField: 'custom value'
       };
 
@@ -69,7 +69,7 @@ describe('Schema Integration Tests', () => {
       const schema = getSettingsSchema(config);
       
       const validData = {
-        name: 'Test Project',
+        hooks: {},
         customSetting: 'custom value'
       };
 
@@ -223,18 +223,24 @@ describe('Schema Integration Tests', () => {
       const commandSchema1 = getCommandSchema(config);
       const commandSchema2 = getCommandSchema(config);
 
-      // Both schemas should accept the same custom field
-      const testData = {
+      // Different test data for agent and command schemas
+      const agentTestData = {
         name: 'test',
         description: 'test desc',
         tools: 'bash',
         sharedField: 'shared value'
       };
+      
+      const commandTestData = {
+        'allowed-tools': 'bash',
+        description: 'test desc',
+        sharedField: 'shared value'
+      };
 
-      expect(agentSchema1.safeParse(testData).success).toBe(true);
-      expect(agentSchema2.safeParse(testData).success).toBe(true);
-      expect(commandSchema1.safeParse(testData).success).toBe(true);
-      expect(commandSchema2.safeParse(testData).success).toBe(true);
+      expect(agentSchema1.safeParse(agentTestData).success).toBe(true);
+      expect(agentSchema2.safeParse(agentTestData).success).toBe(true);
+      expect(commandSchema1.safeParse(commandTestData).success).toBe(true);
+      expect(commandSchema2.safeParse(commandTestData).success).toBe(true);
     });
   });
 });

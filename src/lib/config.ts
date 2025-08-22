@@ -24,8 +24,37 @@ const CONFIG_FILES = [
 const configCache = new Map<string, CclintConfig | null>();
 
 /**
- * Load cclint configuration from project directory
- * SECURITY: Enhanced path validation to prevent configuration injection attacks
+ * Load cclint configuration from project directory with comprehensive security validation.
+ * 
+ * Searches for configuration files in order of precedence:
+ * 1. .cclintrc.json (Safe JSON - preferred)
+ * 2. cclint.config.json (Safe JSON)
+ * 3. cclint.config.js (JavaScript with security restrictions)
+ * 4. cclint.config.mjs (ES modules with security restrictions)
+ * 5. .cclintrc.js (JavaScript with security restrictions)
+ * 6. .cclintrc.mjs (ES modules with security restrictions)
+ * 
+ * SECURITY FEATURES:
+ * - Path traversal protection prevents access outside project boundaries
+ * - Static code analysis detects malicious patterns before execution
+ * - Runtime validation prevents dangerous properties and prototype pollution
+ * - Execution timeout prevents hanging configuration functions
+ * - Clear security warnings for JavaScript configuration files
+ * 
+ * @param {string} projectRoot - Absolute path to project root directory
+ * @param {Object} [options] - Configuration loading options
+ * @param {boolean} [options.allowJs=true] - Whether to allow JavaScript configuration files
+ * @returns {Promise<CclintConfig|null>} Loaded configuration or null if none found
+ * @throws {Error} If path is invalid or contains security risks
+ * 
+ * @example
+ * ```typescript
+ * // Load configuration with JavaScript disabled for maximum security
+ * const config = await loadConfig('/path/to/project', { allowJs: false });
+ * 
+ * // Standard usage (JavaScript configs allowed with warnings)
+ * const config = await loadConfig('/path/to/project');
+ * ```
  */
 export async function loadConfig(projectRoot: string, options: { allowJs?: boolean } = {}): Promise<CclintConfig | null> {
   // Basic input validation

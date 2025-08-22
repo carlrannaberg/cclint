@@ -7,19 +7,78 @@ import { ConsoleReporter } from '../reporters/console.js';
 import { JsonReporter } from '../reporters/json.js';
 import { MarkdownReporter } from '../reporters/markdown.js';
 import { findProjectRoot, detectProjectInfo } from '../lib/project-detection.js';
-import { calculateSummary, writeReportToFile, getExitCode } from '../lib/utils.js';
+import { calculateSummary, writeReportToFile, getExitCode, sanitizePath, PathSecurityError } from '../lib/utils.js';
 import type { LintOptions, LintResult, BaseLinter, LintSummary } from '../types/index.js';
 
 /**
- * Main lint command implementation
+ * Main lint command implementation - coordinates all linters and generates reports.
+ * 
+ * This function:
+ * 1. Validates and sanitizes the project root path for security
+ * 2. Detects project information and configuration
+ * 3. Runs all applicable linters (agents, commands, settings, CLAUDE.md)
+ * 4. Collects and consolidates results
+ * 5. Generates reports in the specified format
+ * 6. Handles output to file if requested
+ * 7. Sets appropriate exit code based on results
+ * 
+ * @param {LintOptions} options - Comprehensive linting options
+ * @param {string} [options.root] - Project root directory (auto-detected if not provided)
+ * @param {boolean} [options.quiet=false] - Suppress non-essential output
+ * @param {boolean} [options.verbose=false] - Enable verbose output with detailed information
+ * @param {'console'|'json'|'markdown'} [options.format='console'] - Output format for reports
+ * @param {string} [options.outputFile] - File path to write report (requires --format)
+ * @param {'error'|'warning'|'suggestion'} [options.failOn='error'] - Minimum severity level to fail build
+ * @param {boolean} [options.customSchemas=true] - Enable custom schema validation from config
+ * @param {boolean} [options.parallel=true] - Enable parallel file processing for better performance
+ * @param {number} [options.concurrency=10] - Maximum concurrent file processing operations
+ * 
+ * @throws {Error} If project root is invalid, inaccessible, or contains security risks
+ * @throws {Error} If output file path is invalid or unwritable
+ * 
+ * @example
+ * ```typescript
+ * // Basic usage with auto-detection
+ * await lintCommand({});
+ * 
+ * // Custom project root with JSON output
+ * await lintCommand({
+ *   root: '/path/to/project',
+ *   format: 'json',
+ *   outputFile: 'lint-results.json'
+ * });
+ * 
+ * // High-performance mode with custom concurrency
+ * await lintCommand({
+ *   parallel: true,
+ *   concurrency: 20,
+ *   quiet: true
+ * });
+ * ```
  */
 export async function lintCommand(options: LintOptions): Promise<void> {
   const startTime = Date.now();
   let spinner: ReturnType<typeof ora> | null = null;
 
   try {
-    // Find project root
-    const projectRoot = options.root ? options.root : await findProjectRoot();
+    // Find and sanitize project root
+    let projectRoot: string;
+    
+    if (options.root) {
+      try {
+        // Sanitize user-provided path to prevent path traversal attacks
+        projectRoot = await sanitizePath(options.root);
+      } catch (error) {
+        if (error instanceof PathSecurityError) {
+          console.error(`Security Error: ${error.message}`);
+          process.exit(1);
+        }
+        throw error;
+      }
+    } else {
+      // Auto-detect project root (already safe since it starts from cwd)
+      projectRoot = await findProjectRoot();
+    }
     
     if (!options.quiet) {
       console.log(`Linting Claude Code project at: ${projectRoot}`);

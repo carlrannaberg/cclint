@@ -5,14 +5,26 @@ import { promises as fs } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { lintCommand } from './commands/lint.js';
+import { isPathSafe } from './lib/utils.js';
 
 /**
- * Main CLI entry point for cclint
+ * @fileoverview Main CLI entry point for cclint - a comprehensive linting tool for Claude Code projects.
+ * 
+ * This module provides the command-line interface for linting Claude Code project files,
+ * including agents, commands, settings, and documentation validation.
+ * 
+ * @author CClint Team
+ * @version 1.0.0
  */
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/**
+ * Reads and parses package.json to get version information
+ * @returns {Promise<{name: string, version: string}>} Package name and version
+ * @throws {Error} If package.json cannot be read or parsed
+ */
 async function getPackageInfo() {
   try {
     const packagePath = join(__dirname, '../package.json');
@@ -42,7 +54,16 @@ export async function main(): Promise<void> {
     .option('-o, --output <file>', 'Output file for reports (requires --format)')
     .option('--fail-on <level>', 'Fail build on specified level', 'error')
     .option('--custom-schemas', 'Enable custom schema validation (default: true)')
+    .option('--no-parallel', 'Disable parallel file processing (process files sequentially)')
+    .option('--concurrency <number>', 'Maximum number of files to process concurrently (default: 10)', '10')
     .action(async (options) => {
+      // Early validation for root path to provide better error messages
+      if (options.root && !isPathSafe(options.root)) {
+        console.error(`Error: Invalid or potentially unsafe root path: '${options.root}'`);
+        console.error('Please provide a valid directory path within the current working directory tree.');
+        process.exit(1);
+      }
+
       await lintCommand({
         root: options.root,
         quiet: options.quiet,
@@ -51,6 +72,8 @@ export async function main(): Promise<void> {
         outputFile: options.output,
         failOn: options.failOn as 'error' | 'warning' | 'suggestion',
         customSchemas: options.customSchemas !== false,
+        parallel: !options.noParallel,
+        concurrency: parseInt(options.concurrency, 10),
       });
     });
 

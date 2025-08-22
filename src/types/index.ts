@@ -33,6 +33,8 @@ export interface LintOptions {
   outputFile?: string;
   failOn?: 'error' | 'warning' | 'suggestion';
   customSchemas?: boolean;
+  parallel?: boolean;
+  concurrency?: number;
 }
 
 /**

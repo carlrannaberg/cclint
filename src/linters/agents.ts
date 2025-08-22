@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Linter for Claude Code agent and subagent definition files.
+ * 
+ * This module provides comprehensive validation for agent markdown files,
+ * including frontmatter validation, schema checking, and Claude-specific rules.
+ * 
+ * @author CClint Team
+ * @version 1.0.0
+ */
+
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { glob } from 'glob';
@@ -8,15 +18,38 @@ import { detectProjectInfo } from '../lib/project-detection.js';
 import type { LintResult, LintOptions, FrontmatterData, CclintConfig, ProjectInfo } from '../types/index.js';
 
 /**
- * Linter for Claude Code agent/subagent markdown files
+ * Linter for Claude Code agent and subagent definition files.
+ * 
+ * Validates agent markdown files for:
+ * - Required frontmatter fields (name, description)
+ * - Optional fields (tools, model, category, color, displayName, bundle)
+ * - Tool pattern validation
+ * - Color format validation (hex or CSS named colors)
+ * - Custom schema extensions via configuration
+ * 
+ * @extends {BaseLinterImpl}
  */
 export class AgentsLinter extends BaseLinterImpl {
   name = 'agents';
   description = 'Lint agent and subagent definition files';
 
+  /**
+   * Lint all agent definition files in the project.
+   * 
+   * Searches for markdown files in standard agent directories:
+   * - .claude/agents
+   * - src/agents
+   * - agents
+   * 
+   * Plus any custom include patterns from configuration.
+   * 
+   * @param {string} projectRoot - Absolute path to the project root directory
+   * @param {LintOptions} options - Linting options including parallel processing settings
+   * @param {ProjectInfo} [projectInfo] - Pre-detected project information (optional)
+   * @returns {Promise<LintResult[]>} Array of lint results for each processed file
+   * @throws {Error} If project root is invalid or inaccessible
+   */
   async lint(projectRoot: string, options: LintOptions, projectInfo?: ProjectInfo): Promise<LintResult[]> {
-    const results: LintResult[] = [];
-    
     // Get project info with configuration (use passed projectInfo or detect)
     const info = projectInfo || await detectProjectInfo(projectRoot);
     
@@ -27,35 +60,19 @@ export class AgentsLinter extends BaseLinterImpl {
       path.join(projectRoot, 'agents'),
     ];
 
-    // Add custom include patterns if specified
-    if (info.cclintConfig?.rules?.includePatterns) {
-      for (const pattern of info.cclintConfig.rules.includePatterns) {
-        agentDirs.push(path.join(projectRoot, pattern));
+    // Find all markdown files in the agent directories
+    const files = await this.findMarkdownFilesInDirectories(projectRoot, agentDirs, info.cclintConfig);
+    
+    // Lint each file using the common pattern with parallel processing support
+    return await this.lintFiles(
+      files, 
+      (file, config) => this.lintAgentFile(file, config), 
+      info.cclintConfig,
+      { 
+        parallel: options.parallel !== false, // Default to true unless explicitly disabled
+        concurrency: options.concurrency || 10 
       }
-    }
-
-    for (const agentDir of agentDirs) {
-      try {
-        const pattern = path.join(agentDir, '**/*.md');
-        const files = await glob(pattern);
-        
-        for (const file of files) {
-          // Skip excluded patterns
-          if (shouldSkipFile(file, info.cclintConfig?.rules?.excludePatterns)) {
-            continue;
-          }
-          
-          const result = await this.lintAgentFile(file, info.cclintConfig);
-          if (result) {
-            results.push(result);
-          }
-        }
-      } catch {
-        // Directory doesn't exist or isn't accessible
-      }
-    }
-
-    return results;
+    );
   }
 
   private async lintAgentFile(filePath: string, config?: CclintConfig): Promise<LintResult | null> {
@@ -138,24 +155,11 @@ export class AgentsLinter extends BaseLinterImpl {
     }
 
     // Run custom validation if configured
-    if (config?.agentSchema?.customValidation) {
-      try {
-        const customErrors = config.agentSchema.customValidation(frontmatter as FrontmatterData);
-        for (const error of customErrors) {
-          if (!result.customSchemaErrors) {
-            result.customSchemaErrors = [];
-          }
-          result.customSchemaErrors.push(error);
-          this.addError(result, `Custom validation: ${error}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.addError(result, `Custom validation failed: ${errorMessage}`);
-        if (process.env.CCLINT_VERBOSE) {
-          console.error(`Custom validation error in ${this.name}:`, error);
-        }
-      }
-    }
+    this.runCustomValidation(
+      frontmatter as FrontmatterData, 
+      result, 
+      config?.agentSchema?.customValidation
+    );
   }
 
   private validateTools(tools: unknown, result: LintResult): void {

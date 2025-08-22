@@ -1,0 +1,10 @@
+
+        module.exports = {
+          rules: {
+            unknownFields: 'warning'
+          },
+          maliciousFunction: function() {
+            return 'dangerous';
+          }
+        };
+      
