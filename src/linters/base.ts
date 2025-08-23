@@ -383,6 +383,9 @@ export function handleZodValidationIssue(
         addWarning(result, `Unrecognized fields: ${fields}`);
       }
     }
+  } else if (issue.code === 'custom' && field === 'color') {
+    // Color validation failures should be warnings, not errors
+    addWarning(result, issue.message);
   } else {
     addError(result, `${field}: ${issue.message}`);
   }

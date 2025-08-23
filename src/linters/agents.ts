@@ -128,10 +128,6 @@ export class AgentsLinter extends BaseLinterImpl {
       this.validateTools(frontmatter.tools, result);
     }
 
-    // Validate color field
-    if (frontmatter.color && typeof frontmatter.color === 'string') {
-      this.validateColorField(frontmatter.color, result);
-    }
 
     // Check name matches filename
     if (frontmatter.name && typeof frontmatter.name === 'string') {
@@ -206,15 +202,6 @@ export class AgentsLinter extends BaseLinterImpl {
     }
   }
 
-  private validateColorField(color: string, result: LintResult): void {
-    if (!validateColor(color, CSS_NAMED_COLORS)) {
-      if (color.startsWith('#')) {
-        this.addWarning(result, `Invalid hex color format: "${color}" (should be #RRGGBB or #RRGGBBAA)`);
-      } else {
-        this.addWarning(result, `Color "${color}" is not a valid CSS color`);
-      }
-    }
-  }
 
   private checkNameMatchesFilename(name: string, filePath: string, result: LintResult): void {
     const expectedName = path.basename(filePath, '.md');
