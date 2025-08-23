@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CclintConfig } from '../types/index.js';
+import { validateColor } from '../linters/base.js';
 
 /**
  * Validation schemas for Claude Code project files with extensible architecture
@@ -51,7 +52,10 @@ const BaseAgentFrontmatterSchema = z.object({
     .optional()
     .describe('Comma-separated list of tools (inherits all if omitted)'),
   model: ModelSchema.describe('Preferred model for this agent'),
-  color: z.string().optional().describe('UI color scheme (hex or CSS named color)'),
+  color: z.string().optional().refine(
+    (color) => color === undefined || validateColor(color, CSS_NAMED_COLORS),
+    { message: 'Color must be a valid hex color (#RRGGBB or #RRGGBBAA) or a CSS named color' }
+  ).describe('UI color scheme (hex or CSS named color)'),
 });
 
 // Base Command frontmatter schema (extensible)
