@@ -58,11 +58,6 @@ export class ConsoleReporter {
       }
     }
 
-    // Print unused fields
-    if (result.unusedFields.length > 0) {
-      console.log(chalk.yellow(`  ⚠ Unused fields: ${result.unusedFields.join(', ')}`));
-    }
-
     // Print suggestions (unless quiet mode)
     if (!this.options.quiet) {
       for (const suggestion of result.suggestions) {
@@ -79,7 +74,7 @@ export class ConsoleReporter {
     console.log(`  Errors: ${this.colorizeCount(summary.totalErrors, 'error')}`);
     console.log(`  Warnings: ${this.colorizeCount(summary.totalWarnings, 'warning')}`);
     console.log(`  Suggestions: ${this.colorizeCount(summary.totalSuggestions, 'suggestion')}`);
-    console.log(`  Unused fields: ${this.colorizeCount(summary.totalUnusedFields, 'warning')}`);
+    console.log(``);
     console.log(`  Duration: ${summary.duration}ms`);
 
     // Print final status
@@ -117,7 +112,6 @@ export class ConsoleReporter {
     return (
       result.errors.length === 0 &&
       result.warnings.length === 0 &&
-      result.unusedFields.length === 0 &&
       result.suggestions.length === 0 &&
       (!result.customSchemaErrors || result.customSchemaErrors.length === 0)
     );

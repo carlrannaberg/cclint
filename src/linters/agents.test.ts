@@ -16,6 +16,23 @@ describe('AgentsLinter', () => {
     agentsDir = path.join(tempDir, '.claude', 'agents');
     await fs.mkdir(agentsDir, { recursive: true });
     
+    // Create a custom config that allows the extended fields
+    const configContent = `import { z } from 'zod';
+
+export default {
+  agentSchema: {
+    extend: {
+      category: z.enum(['testing', 'general', 'framework', 'database', 'frontend', 'devops', 'build', 'linting', 'tools', 'universal']).optional(),
+      color: z.string().optional(),
+      displayName: z.string().optional(),
+      bundle: z.array(z.string()).optional(),
+    }
+  }
+};`;
+    
+    const configPath = path.join(tempDir, 'cclint.config.js');
+    await fs.writeFile(configPath, configContent);
+    
     linter = new AgentsLinter();
     mockOptions = {
       quiet: true,

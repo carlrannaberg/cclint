@@ -44,8 +44,7 @@ export abstract class BaseLinterImpl implements BaseLinter {
       errors: [],
       warnings: [],
       suggestions: [],
-      unusedFields: [],
-      missingFields: [],
+        missingFields: [],
     };
   }
 
@@ -66,11 +65,6 @@ export abstract class BaseLinterImpl implements BaseLinter {
     result.suggestions.push(message);
   }
 
-  protected addUnusedField(result: LintResult, field: string): void {
-    if (!result.unusedFields.includes(field)) {
-      result.unusedFields.push(field);
-    }
-  }
 
   protected addMissingField(result: LintResult, field: string): void {
     if (!result.missingFields.includes(field)) {
@@ -151,8 +145,7 @@ export abstract class BaseLinterImpl implements BaseLinter {
           result,
           this.addError.bind(this),
           this.addWarning.bind(this),
-          this.addMissingField.bind(this),
-          this.addUnusedField.bind(this)
+          this.addMissingField.bind(this)
         );
       }
     }
@@ -367,7 +360,6 @@ export function handleZodValidationIssue(
   addError: (result: LintResult, message: string) => void,
   addWarning: (result: LintResult, message: string) => void,
   addMissingField: (result: LintResult, field: string) => void,
-  addUnusedField: (result: LintResult, field: string) => void
 ): void {
   const field = issue.path.join('.');
   
@@ -382,10 +374,13 @@ export function handleZodValidationIssue(
   } else if (issue.code === 'unrecognized_keys') {
     // Handle unrecognized fields
     const unrecognizedIssue = issue as ZodUnrecognizedKeysIssue;
-    if (unrecognizedIssue.keys) {
-      for (const key of unrecognizedIssue.keys) {
-        addUnusedField(result, key);
-        addWarning(result, `Unrecognized field: ${key}`);
+    if (unrecognizedIssue.keys && unrecognizedIssue.keys.length > 0) {
+      // Report all unrecognized fields in a single warning
+      const fields = unrecognizedIssue.keys.join(', ');
+      if (unrecognizedIssue.keys.length === 1) {
+        addWarning(result, `Unrecognized field: ${fields}`);
+      } else {
+        addWarning(result, `Unrecognized fields: ${fields}`);
       }
     }
   } else {

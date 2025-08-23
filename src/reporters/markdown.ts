@@ -39,7 +39,6 @@ export class MarkdownReporter {
       `| Errors | ${summary.totalErrors} |`,
       `| Warnings | ${summary.totalWarnings} |`,
       `| Suggestions | ${summary.totalSuggestions} |`,
-      `| Unused fields | ${summary.totalUnusedFields} |`,
       `| Duration | ${summary.duration}ms |`,
       '',
     ];
@@ -86,12 +85,6 @@ export class MarkdownReporter {
       sections.push('');
     }
 
-    // Unused fields
-    if (result.unusedFields.length > 0) {
-      sections.push('**Unused Fields:**\n');
-      sections.push(`- ${result.unusedFields.join(', ')}`);
-      sections.push('');
-    }
 
     // Suggestions
     if (result.suggestions.length > 0) {
@@ -118,10 +111,6 @@ export class MarkdownReporter {
       sections.push('Address warnings to improve configuration quality and avoid potential issues.\n');
     }
 
-    if (summary.totalUnusedFields > 0) {
-      sections.push('### Priority: Low (Cleanup)\n');
-      sections.push('Remove unused fields to keep configurations clean and maintainable.\n');
-    }
 
     if (summary.totalSuggestions > 0) {
       sections.push('### Priority: Optional (Improvements)\n');
@@ -142,7 +131,6 @@ export class MarkdownReporter {
     return (
       result.errors.length === 0 &&
       result.warnings.length === 0 &&
-      result.unusedFields.length === 0 &&
       result.suggestions.length === 0
     );
   }

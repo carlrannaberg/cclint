@@ -118,14 +118,12 @@ describe('Schema Integration Tests', () => {
         errors: [],
         warnings: [],
         suggestions: [],
-        unusedFields: [],
         missingFields: []
       };
 
       const mockAddError = (res: LintResult, msg: string) => res.errors.push(msg);
       const mockAddWarning = (res: LintResult, msg: string) => res.warnings.push(msg);
       const mockAddMissingField = (res: LintResult, field: string) => res.missingFields.push(field);
-      const mockAddUnusedField = (res: LintResult, field: string) => res.unusedFields.push(field);
 
       const unrecognizedIssue = {
         code: 'unrecognized_keys',
@@ -139,14 +137,11 @@ describe('Schema Integration Tests', () => {
         result,
         mockAddError,
         mockAddWarning,
-        mockAddMissingField,
-        mockAddUnusedField
+        mockAddMissingField
       );
 
-      expect(result.unusedFields).toEqual(['unknownField', 'anotherUnknown']);
       expect(result.warnings).toEqual([
-        'Unrecognized field: unknownField',
-        'Unrecognized field: anotherUnknown'
+        'Unrecognized fields: unknownField, anotherUnknown'
       ]);
     });
 
@@ -157,14 +152,12 @@ describe('Schema Integration Tests', () => {
         errors: [],
         warnings: [],
         suggestions: [],
-        unusedFields: [],
         missingFields: []
       };
 
       const mockAddError = (res: LintResult, msg: string) => res.errors.push(msg);
       const mockAddWarning = (res: LintResult, msg: string) => res.warnings.push(msg);
       const mockAddMissingField = (res: LintResult, field: string) => res.missingFields.push(field);
-      const mockAddUnusedField = (res: LintResult, field: string) => res.unusedFields.push(field);
 
       const missingFieldIssue = {
         code: 'invalid_type',
@@ -179,8 +172,7 @@ describe('Schema Integration Tests', () => {
         result,
         mockAddError,
         mockAddWarning,
-        mockAddMissingField,
-        mockAddUnusedField
+        mockAddMissingField
       );
 
       expect(result.missingFields).toEqual(['description']);

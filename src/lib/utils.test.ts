@@ -15,7 +15,6 @@ describe('utils', () => {
           errors: [],
           warnings: [],
           suggestions: ['suggestion1'],
-          unusedFields: [],
           missingFields: [],
         },
         {
@@ -24,7 +23,6 @@ describe('utils', () => {
           errors: ['error1'],
           warnings: ['warning1'],
           suggestions: [],
-          unusedFields: ['field1'],
           missingFields: [],
         },
       ];
@@ -37,7 +35,6 @@ describe('utils', () => {
       expect(summary.totalErrors).toBe(1);
       expect(summary.totalWarnings).toBe(1);
       expect(summary.totalSuggestions).toBe(1);
-      expect(summary.totalUnusedFields).toBe(1);
       expect(summary.duration).toBeGreaterThan(0);
       expect(summary.results).toBe(results);
     });
@@ -52,7 +49,6 @@ describe('utils', () => {
       expect(summary.totalErrors).toBe(0);
       expect(summary.totalWarnings).toBe(0);
       expect(summary.totalSuggestions).toBe(0);
-      expect(summary.totalUnusedFields).toBe(0);
     });
   });
 

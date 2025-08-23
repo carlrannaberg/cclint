@@ -10,7 +10,6 @@ export interface LintResult {
   errors: string[];
   warnings: string[];
   suggestions: string[];
-  unusedFields: string[];
   missingFields: string[];
   customSchemaErrors?: string[];
 }
@@ -127,7 +126,6 @@ export interface LintSummary {
   totalErrors: number;
   totalWarnings: number;
   totalSuggestions: number;
-  totalUnusedFields: number;
   duration: number;
   results: LintResult[];
 }

@@ -143,7 +143,6 @@ export function calculateSummary(results: LintResult[], startTime: number): Lint
     totalErrors: 0,
     totalWarnings: 0,
     totalSuggestions: 0,
-    totalUnusedFields: 0,
     duration: Date.now() - startTime,
     results,
   };
@@ -155,7 +154,6 @@ export function calculateSummary(results: LintResult[], startTime: number): Lint
     summary.totalErrors += result.errors.length;
     summary.totalWarnings += result.warnings.length;
     summary.totalSuggestions += result.suggestions.length;
-    summary.totalUnusedFields += result.unusedFields.length;
     
     // Include custom schema errors in error count
     if (result.customSchemaErrors) {

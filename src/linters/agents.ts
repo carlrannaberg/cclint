@@ -101,8 +101,7 @@ export class AgentsLinter extends BaseLinterImpl {
             result,
             this.addError.bind(this),
             this.addWarning.bind(this),
-            this.addMissingField.bind(this),
-            this.addUnusedField.bind(this)
+            this.addMissingField.bind(this)
           );
         }
       }

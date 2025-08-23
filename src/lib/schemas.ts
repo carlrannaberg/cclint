@@ -51,12 +51,6 @@ const BaseAgentFrontmatterSchema = z.object({
     .optional()
     .describe('Comma-separated list of tools (inherits all if omitted)'),
   model: ModelSchema.describe('Preferred model for this agent'),
-
-  // Optional extensions
-  category: AgentCategorySchema.optional().describe('Category for grouping agents'),
-  color: z.string().optional().describe('UI color scheme'),
-  displayName: z.string().optional().describe('Display name for UI'),
-  bundle: z.array(z.string()).optional().describe('Bundled subagent names'),
 });
 
 // Base Command frontmatter schema (extensible)
