@@ -162,7 +162,7 @@ export class ClaudeMdLinter extends BaseLinterImpl {
     }
 
     if (!structure.hasDescription) {
-      this.addWarning(result, 'Missing project description before first heading');
+      this.addWarning(result, 'File starts with a heading but has no introductory text. Add a description before the first # heading to explain what this project is about.');
     }
 
     // Check for required sections (use custom config if available)
