@@ -212,7 +212,7 @@ export class AgentsLinter extends BaseLinterImpl {
       if (color.startsWith('#')) {
         this.addWarning(result, `Invalid hex color format: "${color}" (should be #RRGGBB or #RRGGBBAA)`);
       } else {
-        this.addSuggestion(result, `Color "${color}" is not a standard CSS named color`);
+        this.addWarning(result, `Color "${color}" is not a valid CSS color`);
       }
     }
   }

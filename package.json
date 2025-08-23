@@ -1,6 +1,6 @@
 {
   "name": "cclint",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Claude Code Lint - A comprehensive linting tool for Claude Code projects",
   "main": "dist/cli.js",
   "bin": {

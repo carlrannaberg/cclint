@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-**cclint** is a comprehensive linting tool for Claude Code projects that validates agent definitions, command configurations, settings files, and project documentation. It provides security-focused validation with extensible Zod schemas for custom project requirements.
+**cclint** is a comprehensive linting tool specifically for **Claude Code** projects that validates agent definitions, command configurations, settings files, and project documentation against Claude Code's official specifications. 
+
+**IMPORTANT**: All hardcoded validations (colors, tools, hook events, etc.) are strictly based on what Claude Code actually supports. Any project-specific extensions or custom values should be handled through the custom schema system, not by making the base validations more lenient.
 
 ### Key Features
 - Agent/Subagent frontmatter and tool validation

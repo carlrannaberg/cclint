@@ -24,22 +24,23 @@ const CONFIG_FILES = [
 const configCache = new Map<string, CclintConfig | null>();
 
 /**
- * Load cclint configuration from project directory with comprehensive security validation.
+ * Load cclint configuration from project directory with security validation.
  * 
  * Searches for configuration files in order of precedence:
  * 1. .cclintrc.json (Safe JSON - preferred)
  * 2. cclint.config.json (Safe JSON)
- * 3. cclint.config.js (JavaScript with security restrictions)
- * 4. cclint.config.mjs (ES modules with security restrictions)
- * 5. .cclintrc.js (JavaScript with security restrictions)
- * 6. .cclintrc.mjs (ES modules with security restrictions)
+ * 3. cclint.config.js (JavaScript with limited security restrictions)
+ * 4. cclint.config.mjs (ES modules with limited security restrictions)
+ * 5. .cclintrc.js (JavaScript with limited security restrictions)
+ * 6. .cclintrc.mjs (ES modules with limited security restrictions)
  * 
  * SECURITY FEATURES:
  * - Path traversal protection prevents access outside project boundaries
- * - Static code analysis detects malicious patterns before execution
- * - Runtime validation prevents dangerous properties and prototype pollution
+ * - Static code analysis detects dangerous system access patterns
  * - Execution timeout prevents hanging configuration functions
- * - Clear security warnings for JavaScript configuration files
+ * 
+ * NOTE: Runtime object validation has been removed to support Zod schemas
+ * and other legitimate uses of prototype properties in configuration files.
  * 
  * @param {string} projectRoot - Absolute path to project root directory
  * @param {Object} [options] - Configuration loading options
@@ -195,9 +196,7 @@ async function loadJsConfig(configPath: string, projectRoot: string): Promise<Cc
     /process\s*\.\s*(?:exec|spawn|exit)/,
     /eval\s*\(/,
     /Function\s*\(/,
-    /global(?:This)?\.\w+\s*=/,
-    /\.__proto__/,
-    /\.constructor\s*\./
+    /global(?:This)?\.\w+\s*=/
   ];
   
   for (const pattern of dangerousPatterns) {
@@ -210,16 +209,6 @@ async function loadJsConfig(configPath: string, projectRoot: string): Promise<Cc
   const fileUrl = pathToFileURL(configPath).href;
   
   try {
-    // SECURITY WARNING: Dynamic imports can execute arbitrary code
-    // Enhanced warnings and logging for security awareness
-    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.warn(`⚠️  [SECURITY WARNING] Loading JavaScript configuration file:`);
-    console.warn(`   File: ${configPath}`);
-    console.warn(`   This will execute arbitrary JavaScript code from the file.`);
-    console.warn(`   Ensure this file is from a trusted source and has not been tampered with.`);
-    console.warn(`   Consider using JSON configuration files (.cclintrc.json) for better security.`);
-    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    
     const module = await import(fileUrl);
     let config: CclintConfigExport = module.default || module;
     
@@ -241,13 +230,6 @@ async function loadJsConfig(configPath: string, projectRoot: string): Promise<Cc
       throw new Error('Configuration export must be an object or function returning an object');
     }
     
-    // Enhanced security validation with detailed error reporting
-    try {
-      validateConfigurationSafety(config);
-    } catch (error) {
-      throw new Error(`[SECURITY] Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-    
     return config as CclintConfig;
     
   } catch (error) {
@@ -261,80 +243,6 @@ async function loadJsConfig(configPath: string, projectRoot: string): Promise<Cc
   }
 }
 
-/**
- * Validate that configuration object doesn't contain dangerous properties
- * SECURITY: Prevents configuration from containing executable code or dangerous references
- */
-function validateConfigurationSafety(config: unknown): void {
-  if (typeof config !== 'object' || config === null) {
-    return;
-  }
-
-  const dangerousKeys = [
-    '__proto__',
-    'constructor',
-    'prototype',
-    'eval',
-    'Function',
-    'require',
-    'import',
-    'process',
-    'global',
-    'globalThis',
-    'window',
-  ];
-
-  function checkObject(obj: Record<string, unknown>, path = ''): void {
-    // Check for dangerous properties using getOwnPropertyNames to catch __proto__
-    const ownPropertyNames = Object.getOwnPropertyNames(obj);
-    for (const propName of ownPropertyNames) {
-      if (dangerousKeys.includes(propName)) {
-        const currentPath = path ? `${path}.${propName}` : propName;
-        throw new Error(`Configuration contains dangerous property: ${currentPath}`);
-      }
-    }
-    
-    // Check if the prototype has been tampered with (security risk)
-    const proto = Object.getPrototypeOf(obj);
-    if (proto && proto !== Object.prototype && proto !== Array.prototype) {
-      // If the prototype is not the standard Object or Array prototype, it might have been tampered with
-      const protoKeys = Object.getOwnPropertyNames(proto);
-      if (protoKeys.some(key => !['constructor'].includes(key))) {
-        throw new Error(`Configuration contains suspicious prototype modification`);
-      }
-    }
-    
-    for (const [key, value] of Object.entries(obj)) {
-      const currentPath = path ? `${path}.${key}` : key;
-      
-      // Check for dangerous keys
-      if (dangerousKeys.includes(key)) {
-        throw new Error(`Configuration contains dangerous property: ${currentPath}`);
-      }
-      
-      // Check for functions (only allow specific known function types)
-      if (typeof value === 'function') {
-        // Only allow customValidation functions in schema contexts
-        const isCustomValidation = key === 'customValidation';
-        const isInSchemaContext = path.includes('Schema') || path.endsWith('Schema');
-        
-        if (!isCustomValidation || !isInSchemaContext) {
-          if (process.env.CCLINT_VERBOSE) {
-            console.warn(`[SECURITY] Function validation failed for ${currentPath}: Expected customValidation in schema context`);
-          }
-          throw new Error(`Configuration contains unexpected function: ${currentPath}`);
-        }
-      }
-      
-      // Recursively check nested objects
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        checkObject(value as Record<string, unknown>, currentPath);
-      }
-    }
-  }
-
-  checkObject(config as Record<string, unknown>);
-}
 
 /**
  * Validate configuration object structure

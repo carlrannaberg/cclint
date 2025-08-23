@@ -82,9 +82,7 @@ describe('Configuration Loading System', () => {
   });
 
   describe('JavaScript configuration loading security', () => {
-    it('should warn about security risks when loading JS files', async () => {
-      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      
+    it('should load JavaScript configuration files', async () => {
       const jsConfig = `
         module.exports = {
           rules: {
@@ -98,10 +96,11 @@ describe('Configuration Loading System', () => {
 
       const result = await loadConfig(tempDir);
       
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('[SECURITY WARNING] Loading JavaScript configuration file'));
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('This will execute arbitrary JavaScript code'));
-      
-      consoleWarnSpy.mockRestore();
+      expect(result).toEqual({
+        rules: {
+          unknownFields: 'warning'
+        }
+      });
     });
 
     it('should reject TypeScript configuration files', async () => {
@@ -121,8 +120,8 @@ describe('Configuration Loading System', () => {
       expect(result).toBeNull();
     });
 
-    it('should validate configuration safety - reject dangerous properties', async () => {
-      const dangerousConfig = `
+    it('should accept configurations with __proto__ (no longer blocked)', async () => {
+      const configWithProto = `
         module.exports = {
           rules: {
             unknownFields: 'warning'
@@ -134,10 +133,14 @@ describe('Configuration Loading System', () => {
       `;
 
       const configPath = path.join(tempDir, 'cclint.config.js');
-      await fs.writeFile(configPath, dangerousConfig);
+      await fs.writeFile(configPath, configWithProto);
 
       const result = await loadConfig(tempDir);
-      expect(result).toBeNull(); // Should fail safety validation
+      expect(result).toEqual({
+        rules: {
+          unknownFields: 'warning'
+        }
+      }); // __proto__ doesn't create an own property, so it won't show up
     });
 
     it('should validate configuration safety - reject unexpected functions', async () => {
@@ -431,8 +434,8 @@ describe('Configuration Loading System', () => {
   });
 
   describe('enhanced security validation tests', () => {
-    it('should reject configuration with prototype pollution attempts', async () => {
-      const maliciousConfig = `
+    it('should accept configuration with __proto__ (security validation removed)', async () => {
+      const configWithProto = `
         module.exports = {
           rules: { unknownFields: 'warning' },
           '__proto__': { polluted: true }
@@ -440,14 +443,16 @@ describe('Configuration Loading System', () => {
       `;
 
       const configPath = path.join(tempDir, 'cclint.config.js');
-      await fs.writeFile(configPath, maliciousConfig);
+      await fs.writeFile(configPath, configWithProto);
 
       const result = await loadConfig(tempDir);
-      expect(result).toBeNull(); // Should reject prototype pollution
+      expect(result).toEqual({
+        rules: { unknownFields: 'warning' }
+      }); // Now accepts __proto__ since security validation was removed
     });
 
-    it('should reject configuration with constructor manipulation', async () => {
-      const maliciousConfig = `
+    it('should accept configuration with constructor manipulation (security validation removed)', async () => {
+      const configWithConstructor = `
         const config = {
           rules: { unknownFields: 'warning' }
         };
@@ -456,10 +461,12 @@ describe('Configuration Loading System', () => {
       `;
 
       const configPath = path.join(tempDir, 'cclint.config.js');
-      await fs.writeFile(configPath, maliciousConfig);
+      await fs.writeFile(configPath, configWithConstructor);
 
       const result = await loadConfig(tempDir);
-      expect(result).toBeNull(); // Should reject constructor manipulation
+      expect(result).toEqual({
+        rules: { unknownFields: 'warning' }
+      }); // Now accepts constructor patterns since security validation was removed for Zod support
     });
 
     it('should reject configuration files with obvious malicious patterns via static analysis', async () => {

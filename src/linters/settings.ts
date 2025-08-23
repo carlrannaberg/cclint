@@ -111,7 +111,18 @@ export class SettingsLinter extends BaseLinterImpl {
     hooks: Record<string, unknown>, 
     result: LintResult
   ): void {
-    const validEvents = ['PostToolUse', 'Stop', 'PreToolUse'];
+    // Valid hook events from https://docs.anthropic.com/en/docs/claude-code/hooks
+    const validEvents = [
+      'PreToolUse',
+      'PostToolUse',
+      'Notification',
+      'UserPromptSubmit',
+      'Stop',
+      'SubagentStop',
+      'SessionEnd',
+      'PreCompact',
+      'SessionStart'
+    ];
     
     for (const [eventType, eventConfig] of Object.entries(hooks)) {
       // Check if event type is valid
