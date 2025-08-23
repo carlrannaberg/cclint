@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { sanitizePath, PathSecurityError, isPathSafe } from './utils.js';
 import type { CclintConfig, CclintConfigExport } from '../types/index.js';
 
 /**
@@ -22,6 +21,47 @@ const CONFIG_FILES = [
  * Configuration cache to avoid multiple loads
  */
 const configCache = new Map<string, CclintConfig | null>();
+
+/**
+ * Dangerous system paths that should not be accessed
+ */
+const DANGEROUS_SYSTEM_PATHS = ['/etc/passwd', '/etc/shadow', '/etc/hosts', '/usr/bin', '/usr/sbin', '/sys', '/proc', '/dev', '/bin', '/sbin'];
+
+/**
+ * Check if a path is a dangerous system directory
+ */
+function isSystemPath(resolvedPath: string): boolean {
+  return DANGEROUS_SYSTEM_PATHS.some(dangerousPath => 
+    resolvedPath.startsWith(dangerousPath) || resolvedPath === dangerousPath
+  );
+}
+
+/**
+ * Validate and resolve a project root path with security checks
+ */
+function validateProjectRoot(projectRoot: string): string {
+  // Basic input validation
+  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.includes('\0') || projectRoot.trim() === '') {
+    throw new Error(`Invalid project root path: contains unsafe characters or patterns`);
+  }
+  
+  const cleanPath = projectRoot.trim();
+  
+  // Check for obvious path traversal attacks
+  if (cleanPath.includes('..')) {
+    throw new Error(`Invalid project root path: path traversal detected with '../'`);
+  }
+  
+  // Resolve to absolute path
+  const resolvedPath = path.resolve(cleanPath);
+  
+  // Check against dangerous system paths
+  if (isSystemPath(resolvedPath)) {
+    throw new Error(`Invalid project root path: cannot access system directory ${resolvedPath}`);
+  }
+  
+  return resolvedPath;
+}
 
 /**
  * Load cclint configuration from project directory with security validation.
@@ -58,32 +98,8 @@ const configCache = new Map<string, CclintConfig | null>();
  * ```
  */
 export async function loadConfig(projectRoot: string, options: { allowJs?: boolean } = {}): Promise<CclintConfig | null> {
-  // Basic input validation
-  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.includes('\0') || projectRoot.trim() === '') {
-    throw new Error(`Invalid project root path: contains unsafe characters or patterns`);
-  }
-  
-  const cleanPath = projectRoot.trim();
-  
-  // Check for obvious path traversal attacks
-  if (cleanPath.includes('..')) {
-    throw new Error(`Invalid project root path: potential security risk detected`);
-  }
-  
-  // Resolve to absolute path
-  const resolvedPath = path.resolve(cleanPath);
-  
-  // Enhanced security: block access to critical system directories
-  const dangerousSystemPaths = ['/etc/passwd', '/etc/shadow', '/etc/hosts', '/usr/bin', '/usr/sbin', '/sys', '/proc', '/dev', '/bin', '/sbin'];
-  const isDangerous = dangerousSystemPaths.some(dangerousPath => 
-    resolvedPath.startsWith(dangerousPath) || resolvedPath === dangerousPath
-  );
-  
-  if (isDangerous) {
-    throw new Error(`Invalid project root path: potential security risk detected`);
-  }
-  
-  projectRoot = resolvedPath;
+  // Validate and resolve project root path
+  projectRoot = validateProjectRoot(projectRoot);
 
   // Check cache first
   if (configCache.has(projectRoot)) {
@@ -342,32 +358,8 @@ export function mergeWithDefaults(config: CclintConfig): CclintConfig {
  * SECURITY: Enhanced path validation to prevent directory traversal attacks
  */
 export async function findConfigFile(projectRoot: string): Promise<string | null> {
-  // Basic input validation
-  if (!projectRoot || typeof projectRoot !== 'string' || projectRoot.includes('\0') || projectRoot.trim() === '') {
-    throw new Error(`Invalid project root path: contains unsafe characters or patterns`);
-  }
-  
-  const cleanPath = projectRoot.trim();
-  
-  // Check for obvious path traversal attacks
-  if (cleanPath.includes('..')) {
-    throw new Error(`Invalid project root path: potential security risk detected`);
-  }
-  
-  // Resolve to absolute path
-  const resolvedPath = path.resolve(cleanPath);
-  
-  // Enhanced security: block access to critical system directories
-  const dangerousSystemPaths = ['/etc/passwd', '/etc/shadow', '/etc/hosts', '/usr/bin', '/usr/sbin', '/sys', '/proc', '/dev', '/bin', '/sbin'];
-  const isDangerous = dangerousSystemPaths.some(dangerousPath => 
-    resolvedPath.startsWith(dangerousPath) || resolvedPath === dangerousPath
-  );
-  
-  if (isDangerous) {
-    throw new Error(`Invalid project root path: potential security risk detected`);
-  }
-  
-  projectRoot = resolvedPath;
+  // Validate and resolve project root path
+  projectRoot = validateProjectRoot(projectRoot);
 
   for (const configFile of CONFIG_FILES) {
     const configPath = path.join(projectRoot, configFile);
