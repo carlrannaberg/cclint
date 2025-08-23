@@ -354,8 +354,7 @@ export function mergeWithDefaults(config: CclintConfig): CclintConfig {
 }
 
 /**
- * Get configuration file path if it exists with enhanced security validation
- * SECURITY: Enhanced path validation to prevent directory traversal attacks
+ * Get configuration file path if it exists
  */
 export async function findConfigFile(projectRoot: string): Promise<string | null> {
   // Validate and resolve project root path
