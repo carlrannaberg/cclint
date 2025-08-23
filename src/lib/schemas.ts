@@ -51,6 +51,7 @@ const BaseAgentFrontmatterSchema = z.object({
     .optional()
     .describe('Comma-separated list of tools (inherits all if omitted)'),
   model: ModelSchema.describe('Preferred model for this agent'),
+  color: z.string().optional().describe('UI color scheme (hex or CSS named color)'),
 });
 
 // Base Command frontmatter schema (extensible)

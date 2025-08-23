@@ -17,7 +17,6 @@ export default {
         'universal',
       ]).optional().describe('Category for grouping agents'),
       
-      color: z.string().optional().describe('UI color scheme'),
       displayName: z.string().optional().describe('Display name for UI'),
       bundle: z.array(z.string()).optional().describe('Bundled subagent names'),
     }

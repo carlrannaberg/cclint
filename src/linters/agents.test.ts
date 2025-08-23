@@ -23,7 +23,6 @@ export default {
   agentSchema: {
     extend: {
       category: z.enum(['testing', 'general', 'framework', 'database', 'frontend', 'devops', 'build', 'linting', 'tools', 'universal']).optional(),
-      color: z.string().optional(),
       displayName: z.string().optional(),
       bundle: z.array(z.string()).optional(),
     }
