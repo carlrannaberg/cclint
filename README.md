@@ -1,5 +1,9 @@
 # cclint (Claude Code Lint)
 
+[![npm version](https://img.shields.io/npm/v/@carlrannaberg/cclint.svg)](https://www.npmjs.com/package/@carlrannaberg/cclint)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/node/v/@carlrannaberg/cclint.svg)](https://nodejs.org)
+
 A comprehensive linting tool for Claude Code projects that validates agent definitions, command configurations, settings files, and project documentation.
 
 ## Features
@@ -16,7 +20,14 @@ A comprehensive linting tool for Claude Code projects that validates agent defin
 ## Installation
 
 ```bash
-npm install -g cclint
+# Install globally
+npm install -g @carlrannaberg/cclint
+
+# Install as dev dependency
+npm install --save-dev @carlrannaberg/cclint
+
+# Use without installing
+npx @carlrannaberg/cclint
 ```
 
 ## Usage
@@ -336,7 +347,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - run: npm install -g cclint
+      - run: npm install -g @carlrannaberg/cclint
       - run: cclint --fail-on warning
 ```
 
