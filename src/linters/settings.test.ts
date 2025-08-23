@@ -44,7 +44,7 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run typecheck-changed"
+                  command: "npm run typecheck"
                 }
               ]
             }
@@ -86,7 +86,7 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run lint-changed"
+                  command: "npm run lint"
                 }
               ]
             }
@@ -97,7 +97,7 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run create-checkpoint"
+                  command: "git stash"
                 }
               ]
             }
@@ -444,17 +444,17 @@ describe('SettingsLinter', () => {
     });
   });
 
-  describe('claudekit hooks validation', () => {
-    it('should accept known claudekit hooks', async () => {
-      const knownHooks = [
-        'typecheck-changed',
-        'lint-changed',
-        'test-changed',
-        'create-checkpoint',
-        'check-todos'
+  describe('command validation', () => {
+    it('should accept any non-empty command', async () => {
+      const commands = [
+        'npm run typecheck',
+        'git status',
+        'npm test',
+        'echo "hello"',
+        'custom-script.sh'
       ];
 
-      for (const hookName of knownHooks) {
+      for (const command of commands) {
         const settingsContent = JSON.stringify({
           hooks: {
             PostToolUse: [
@@ -463,7 +463,7 @@ describe('SettingsLinter', () => {
                 hooks: [
                   {
                     type: "command",
-                    command: `claudekit-hooks run ${hookName}`
+                    command: command
                   }
                 ]
               }
@@ -477,11 +477,13 @@ describe('SettingsLinter', () => {
         const results = await linter.lint(tempDir, mockOptions);
         
         expect(results).toHaveLength(1);
-        expect(results[0].suggestions.every(sugg => !sugg.includes(`Unknown claudekit hook: ${hookName}`))).toBe(true);
+        // Should not have any errors or warnings about the command itself
+        expect(results[0].errors).toHaveLength(0);
+        expect(results[0].warnings).toHaveLength(0);
       }
     });
 
-    it('should suggest unknown claudekit hooks', async () => {
+    it('should only validate that commands are not empty', async () => {
       const settingsContent = JSON.stringify({
         hooks: {
           PostToolUse: [
@@ -490,7 +492,7 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run unknown-hook"
+                  command: "   "  // Empty/whitespace command
                 }
               ]
             }
@@ -504,7 +506,7 @@ describe('SettingsLinter', () => {
       const results = await linter.lint(tempDir, mockOptions);
       
       expect(results).toHaveLength(1);
-      expect(results[0].suggestions.some(sugg => sugg.includes('Unknown claudekit hook: unknown-hook'))).toBe(true);
+      expect(results[0].errors.some(err => err.includes('Command cannot be empty'))).toBe(true);
     });
   });
 
@@ -651,11 +653,11 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run lint-changed"
+                  command: "npm run lint"
                 },
                 {
                   type: "command",
-                  command: "claudekit-hooks run typecheck-changed"
+                  command: "npm run typecheck"
                 }
               ]
             },
@@ -664,7 +666,7 @@ describe('SettingsLinter', () => {
               hooks: [
                 {
                   type: "command",
-                  command: "claudekit-hooks run test-changed"
+                  command: "npm test"
                 }
               ]
             }

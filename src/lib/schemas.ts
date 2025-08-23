@@ -5,7 +5,7 @@ import type { CclintConfig } from '../types/index.js';
  * Validation schemas for Claude Code project files with extensible architecture
  */
 
-// Agent Categories (matching claudekit patterns)
+// Agent Categories
 const AgentCategorySchema = z.enum([
   'general',
   'framework', 
@@ -52,7 +52,7 @@ const BaseAgentFrontmatterSchema = z.object({
     .describe('Comma-separated list of tools (inherits all if omitted)'),
   model: ModelSchema.describe('Preferred model for this agent'),
 
-  // Optional claudekit extensions
+  // Optional extensions
   category: AgentCategorySchema.optional().describe('Category for grouping agents'),
   color: z.string().optional().describe('UI color scheme'),
   displayName: z.string().optional().describe('Display name for UI'),

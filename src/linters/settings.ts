@@ -222,30 +222,9 @@ export class SettingsLinter extends BaseLinterImpl {
   }
 
   private validateCommand(command: string, path: string, result: LintResult): void {
-    // Check for claudekit-hooks pattern
-    if (command.startsWith('claudekit-hooks run ')) {
-      const hookName = command.replace('claudekit-hooks run ', '');
-      this.validateClaudekitHook(hookName, path, result);
-    } else {
-      // Generic command validation
-      if (command.trim() === '') {
-        this.addError(result, `${path}: Command cannot be empty`);
-      }
-    }
-  }
-
-  private validateClaudekitHook(hookName: string, path: string, result: LintResult): void {
-    // Common claudekit hook names
-    const knownHooks = [
-      'typecheck-changed', 'typecheck-project',
-      'lint-changed', 'lint-project', 
-      'test-changed', 'test-project',
-      'create-checkpoint', 'check-todos',
-      'check-any-changed', 'codebase-map'
-    ];
-
-    if (!knownHooks.includes(hookName)) {
-      this.addSuggestion(result, `${path}: Unknown claudekit hook: ${hookName}`);
+    // Only validate that command is not empty
+    if (command.trim() === '') {
+      this.addError(result, `${path}: Command cannot be empty`);
     }
   }
 

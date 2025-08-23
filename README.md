@@ -377,5 +377,4 @@ MIT
 
 ## Related Projects
 
-- [claudekit](https://github.com/codeium/claudekit) - Toolkit for Claude Code development
 - [Claude Code](https://claude.ai/code) - AI-powered coding assistant
