@@ -1,6 +1,9 @@
-# AGENTS.md - AI Assistant Guide
+# AGENTS.md
+This file provides guidance to AI coding assistants working in this repository.
 
-## Project Overview
+**Note:** CLAUDE.md, .clinerules, .cursorrules, .windsurfrules, .replit.md, .github/copilot-instructions.md, and other AI config files are symlinks to AGENTS.md in this project.
+
+# cclint (Claude Code Lint)
 
 **cclint** is a comprehensive linting tool specifically for **Claude Code** projects that validates agent definitions, command configurations, settings files, and project documentation against Claude Code's official specifications. 
 
@@ -15,6 +18,25 @@
 - Auto-detection of project root via directory climbing
 - Multiple output formats (console, JSON, markdown)
 - CI/CD integration with configurable exit codes
+
+## Build & Commands
+
+### Script Command Consistency
+**Important**: When modifying npm scripts in package.json, ensure all references are updated:
+- GitHub Actions workflows (.github/workflows/*.yml)
+- README.md documentation
+- Contributing guides
+- Dockerfile/docker-compose.yml
+- CI/CD configuration files
+- Setup/installation scripts
+
+Common places that reference npm scripts:
+- Build commands → Check: workflows, README, Dockerfile
+- Test commands → Check: workflows, contributing docs
+- Lint commands → Check: pre-commit hooks, workflows
+- Start commands → Check: README, deployment docs
+
+**Note**: Always use the EXACT script names from package.json, not assumed names
 
 ## Build & Development Commands
 
@@ -46,6 +68,17 @@ npm install -g .
 - **Security Testing**: Includes path traversal, code injection, and timeout protection tests
 - **Integration Tests**: End-to-end CLI testing with real configuration files
 
+### Testing Philosophy
+**When tests fail, fix the code, not the test.**
+
+Key principles:
+- **Tests should be meaningful** - Avoid tests that always pass regardless of behavior
+- **Test actual functionality** - Call the functions being tested, don't just check side effects
+- **Failing tests are valuable** - They reveal bugs or missing features
+- **Fix the root cause** - When a test fails, fix the underlying issue, don't hide the test
+- **Test edge cases** - Tests that reveal limitations help improve the code
+- **Document test purpose** - Each test should include a comment explaining why it exists and what it validates
+
 ### Quality Assurance
 - **TypeScript**: Strict mode enabled, no `any` types allowed
 - **ESLint**: @typescript-eslint rules for code quality
@@ -74,6 +107,98 @@ src/
 └── types/
     └── index.ts        # TypeScript type definitions
 ```
+
+## Directory Structure & File Organization
+
+### Reports Directory
+ALL project reports and documentation should be saved to the `reports/` directory:
+
+```
+cclint/
+├── reports/              # All project reports and documentation
+│   └── *.md             # Various report types
+├── temp/                # Temporary files and debugging
+└── [other directories]
+```
+
+### Report Generation Guidelines
+**Important**: ALL reports should be saved to the `reports/` directory with descriptive names:
+
+**Implementation Reports:**
+- Phase validation: `PHASE_X_VALIDATION_REPORT.md`
+- Implementation summaries: `IMPLEMENTATION_SUMMARY_[FEATURE].md`
+- Feature completion: `FEATURE_[NAME]_REPORT.md`
+
+**Testing & Analysis Reports:**
+- Test results: `TEST_RESULTS_[DATE].md`
+- Coverage reports: `COVERAGE_REPORT_[DATE].md`
+- Performance analysis: `PERFORMANCE_ANALYSIS_[SCENARIO].md`
+- Security scans: `SECURITY_SCAN_[DATE].md`
+
+**Quality & Validation:**
+- Code quality: `CODE_QUALITY_REPORT.md`
+- Dependency analysis: `DEPENDENCY_REPORT.md`
+- API compatibility: `API_COMPATIBILITY_REPORT.md`
+
+**Report Naming Conventions:**
+- Use descriptive names: `[TYPE]_[SCOPE]_[DATE].md`
+- Include dates: `YYYY-MM-DD` format
+- Group with prefixes: `TEST_`, `PERFORMANCE_`, `SECURITY_`
+- Markdown format: All reports end in `.md`
+
+### Temporary Files & Debugging
+All temporary files, debugging scripts, and test artifacts should be organized in a `/temp` folder:
+
+**Temporary File Organization:**
+- **Debug scripts**: `temp/debug-*.js`, `temp/analyze-*.py`
+- **Test artifacts**: `temp/test-results/`, `temp/coverage/`
+- **Generated files**: `temp/generated/`, `temp/build-artifacts/`
+- **Logs**: `temp/logs/debug.log`, `temp/logs/error.log`
+
+**Guidelines:**
+- Never commit files from `/temp` directory
+- Use `/temp` for all debugging and analysis scripts created during development
+- Clean up `/temp` directory regularly or use automated cleanup
+- Include `/temp/` in `.gitignore` to prevent accidental commits
+
+### Example `.gitignore` patterns
+```
+# Temporary files and debugging
+/temp/
+temp/
+**/temp/
+debug-*.js
+test-*.py
+analyze-*.sh
+*-debug.*
+*.debug
+
+# Claude settings
+.claude/settings.local.json
+
+# Don't ignore reports directory
+!reports/
+!reports/**
+```
+
+### Claude Code Settings (.claude Directory)
+
+The `.claude` directory contains Claude Code configuration files with specific version control rules:
+
+#### Version Controlled Files (commit these):
+- `.claude/settings.json` - Shared team settings for hooks, tools, and environment
+- `.claude/commands/*.md` - Custom slash commands available to all team members
+- `.claude/hooks/*.sh` - Hook scripts for automated validations and actions
+
+#### Ignored Files (do NOT commit):
+- `.claude/settings.local.json` - Personal preferences and local overrides
+- Any `*.local.json` files - Personal configuration not meant for sharing
+
+**Important Notes:**
+- Claude Code automatically adds `.claude/settings.local.json` to `.gitignore`
+- The shared `settings.json` should contain team-wide standards (linting, type checking, etc.)
+- Personal preferences or experimental settings belong in `settings.local.json`
+- Hook scripts in `.claude/hooks/` should be executable (`chmod +x`)
 
 ### Code Conventions
 
@@ -251,6 +376,99 @@ Set `CCLINT_VERBOSE=1` to enable detailed logging for security events and valida
 - Custom schema validation functions must not access external resources
 - Path traversal protection requires proper `allowedBasePath` configuration
 - Dynamic configuration loading has 5-second timeout protection
+
+## Using Specialized Agents
+
+### ⚠️ IMPORTANT: Always Delegate to Specialists
+
+**When specialized agents are available, you MUST use them instead of attempting tasks yourself.**
+
+Specialized agents provide deep expertise in specific domains. They have been trained on best practices, common pitfalls, and advanced patterns that general-purpose assistants might miss.
+
+**Key Principles:**
+- Always check if a specialized agent exists for your task domain
+- Delegate complex technical problems to domain experts
+- Use diagnostic agents first when the problem scope is unclear
+- Leverage specialists for architecture decisions and optimizations
+
+**Why This Matters:**
+- Specialists have deeper, more focused knowledge
+- They're aware of edge cases and subtle bugs
+- They follow established patterns and best practices
+- They can provide more comprehensive solutions
+
+**Available Specialized Agents in `.claude/agents/`:**
+
+### Build & Tools
+- **`vite-expert.md`** - Vite build optimization, ESM-first development, HMR optimization
+- **`webpack-expert.md`** - Webpack configuration, bundle analysis, code splitting
+- **`typescript-build-expert.md`** - TypeScript compiler configuration and build optimization
+- **`linting-expert.md`** - Code linting, formatting, and static analysis
+
+### Code Quality & Review
+- **`code-review-expert.md`** - Comprehensive code review covering architecture, quality, security
+- **`refactoring-expert.md`** - Systematic code refactoring and code smell detection
+- **`triage-expert.md`** - Context gathering and initial problem diagnosis
+
+### Database & Backend
+- **`database-expert.md`** - Database performance and schema design across multiple databases
+- **`postgres-expert.md`** - PostgreSQL-specific query optimization and administration
+- **`mongodb-expert.md`** - MongoDB document modeling and aggregation pipeline optimization
+- **`nestjs-expert.md`** - Nest.js framework architecture and dependency injection
+
+### DevOps & Infrastructure
+- **`devops-expert.md`** - CI/CD pipelines, containerization, infrastructure as code
+- **`docker-expert.md`** - Docker containerization and multi-stage builds
+- **`github-actions-expert.md`** - GitHub Actions CI/CD pipeline optimization
+
+### Frontend & UI
+- **`react-expert.md`** - React component patterns, hooks, and state management
+- **`react-performance-expert.md`** - React performance optimization and Core Web Vitals
+- **`nextjs-expert.md`** - Next.js App Router, Server Components, and performance
+- **`css-styling-expert.md`** - CSS architecture, responsive design, and design systems
+- **`accessibility-expert.md`** - WCAG compliance and screen reader optimization
+
+### Testing & Quality Assurance
+- **`testing-expert.md`** - Cross-framework testing strategies and debugging
+- **`jest-testing-expert.md`** - Jest framework and advanced mocking strategies
+- **`vitest-expert.md`** - Vitest testing framework specifics
+- **`playwright-expert.md`** - End-to-end testing and cross-browser automation
+
+### TypeScript & Type Systems
+- **`typescript-expert.md`** - General TypeScript development patterns
+- **`typescript-type-expert.md`** - Advanced type system, generics, and conditional types
+
+### Version Control & Documentation
+- **`git-expert.md`** - Git workflow issues, merge conflicts, and repository management
+- **`documentation-expert.md`** - Documentation structure, flow, and information architecture
+
+### AI & Development Tools
+- **`ai-sdk-expert.md`** - Vercel AI SDK integration and streaming patterns
+- **`cli-expert.md`** - Building npm package CLIs with Unix philosophy
+
+### Node.js & Backend
+- **`nodejs-expert.md`** - Node.js runtime, async patterns, and performance optimization
+
+**Discovering Available Agents:**
+```bash
+# List all available specialized agents
+ls .claude/agents/
+
+# Quick overview of agent capabilities
+grep -r "description:" .claude/agents/ | head -10
+```
+
+**Usage Pattern:**
+```
+Use the Task tool with subagent_type: "[agent-name-without-md]"
+```
+
+For example:
+- TypeScript issues: `subagent_type: "typescript-expert"`
+- React performance: `subagent_type: "react-performance-expert"`
+- Database optimization: `subagent_type: "postgres-expert"`
+
+Remember: If a specialist exists for the task at hand, delegation is not optional—it's required for optimal results.
 
 ---
 
