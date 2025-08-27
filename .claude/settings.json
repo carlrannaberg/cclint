@@ -45,6 +45,15 @@
             "command": "claudekit-hooks run check-comment-replacement"
           }
         ]
+      },
+      {
+        "matcher": "Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-unused-parameters"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -109,6 +118,32 @@
         ]
       }
     ],
-    "SessionStart": []
+    "SessionStart": [],
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run file-guard"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run codebase-map"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run thinking-level"
+          }
+        ]
+      }
+    ]
   }
 }
