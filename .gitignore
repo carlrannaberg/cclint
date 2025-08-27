@@ -31,9 +31,14 @@ logs
 # Coverage
 coverage/
 
-# Temporary files
+# Temporary files and directories
 *.tmp
 *.temp
+temp-*/
+test-*/
+tmp/
+temp/
+.claude/agents/tmp/
 
 # Environment files
 .env
@@ -48,3 +53,6 @@ reports/
 *.report.json
 # Codebase map file
 .codebasemap
+
+# Backup files
+*.backup-*
