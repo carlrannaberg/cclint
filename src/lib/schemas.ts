@@ -19,11 +19,11 @@ const AgentCategorySchema = z.enum([
   'universal',
 ]);
 
-// Model options
+// Model options - valid Claude Code model values
 const ModelSchema = z
-  .enum(['opus', 'sonnet', 'haiku'])
-  .or(z.string())
-  .optional();
+  .enum(['sonnet', 'opus', 'haiku', 'sonnet[1m]', 'opusplan', 'inherit'])
+  .optional()
+  .describe('Model to use (defaults to sonnet if not specified)');
 
 // Command Category
 const CommandCategorySchema = z.enum([
@@ -31,6 +31,18 @@ const CommandCategorySchema = z.enum([
   'ai-assistant', 
   'validation',
 ]).optional();
+
+// Valid Claude Code UI colors - limited to 8 standard colors
+const VALID_CLAUDE_COLORS = new Set([
+  'red',
+  'blue', 
+  'green',
+  'yellow',
+  'purple',
+  'orange',
+  'pink',
+  'cyan',
+]);
 
 // Base Agent/Subagent frontmatter schema (extensible)
 const BaseAgentFrontmatterSchema = z.object({
@@ -46,10 +58,13 @@ const BaseAgentFrontmatterSchema = z.object({
 
   // Optional Claude Code fields
   tools: z
-    .string()
-    .nullable()
+    .union([z.string(), z.array(z.string())])
     .optional()
-    .describe('Comma-separated list of tools (inherits all if omitted)'),
+    .describe('Tool access: "*" for all, array of tool names, or omit for default ["*"]'),
+  'allowed-tools': z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .describe('Alternative name for tools field'),
   model: ModelSchema.describe('Preferred model for this agent'),
   color: z
     .string()
@@ -57,21 +72,14 @@ const BaseAgentFrontmatterSchema = z.object({
     .refine(
       (value) => {
         if (!value) return true; // optional field
-        // Check hex color format (#RGB, #RRGGBB, #RRGGBBAA)
-        if (value.startsWith('#')) {
-          const hex = value.slice(1);
-          return /^([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(hex);
-        }
-        // Check CSS named color
-        return CSS_NAMED_COLORS.has(value.toLowerCase());
+        // Only allow the 8 valid Claude Code colors
+        return VALID_CLAUDE_COLORS.has(value.toLowerCase());
       },
       (value) => ({
-        message: value?.startsWith('#') 
-          ? `Invalid hex color format: "${value}" (should be #RGB, #RRGGBB, or #RRGGBBAA)`
-          : `Color "${value}" is not a valid CSS named color`
+        message: `Color "${value}" is not a valid Claude Code color. Valid colors are: ${Array.from(VALID_CLAUDE_COLORS).join(', ')}`
       })
     )
-    .describe('UI color scheme (hex or CSS named color)'),
+    .describe('UI color scheme (must be one of the 8 valid Claude Code colors)'),
 });
 
 // Base Command frontmatter schema (extensible)
@@ -186,32 +194,6 @@ export const KNOWN_CLAUDE_TOOLS = new Set([
   'ExitPlanMode',
 ]);
 
-// CSS named colors for validation
-export const CSS_NAMED_COLORS = new Set([
-  'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque',
-  'black', 'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue',
-  'chartreuse', 'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan',
-  'darkblue', 'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey',
-  'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
-  'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey',
-  'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue', 'dimgray', 'dimgrey',
-  'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro',
-  'ghostwhite', 'gold', 'goldenrod', 'gray', 'green', 'greenyellow', 'grey', 'honeydew',
-  'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush',
-  'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan', 'lightgoldenrodyellow',
-  'lightgray', 'lightgreen', 'lightgrey', 'lightpink', 'lightsalmon', 'lightseagreen',
-  'lightskyblue', 'lightslategray', 'lightslategrey', 'lightsteelblue', 'lightyellow',
-  'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine', 'mediumblue',
-  'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen',
-  'mediumturquoise', 'mediumvioletred', 'midnightblue', 'mintcream', 'mistyrose',
-  'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive', 'olivedrab', 'orange',
-  'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise', 'palevioletred',
-  'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple',
-  'rebeccapurple', 'red', 'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown',
-  'seagreen', 'seashell', 'sienna', 'silver', 'skyblue', 'slateblue', 'slategray',
-  'slategrey', 'snow', 'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
-  'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen',
-]);
 
 // Expected CLAUDE.md sections (based on AGENTS.md template)
 export const REQUIRED_CLAUDE_MD_SECTIONS = [
@@ -230,3 +212,6 @@ export const RECOMMENDED_CLAUDE_MD_SECTIONS = [
   'naming conventions',
   'cli tools reference',
 ];
+
+// Export valid colors and model schema for use in other modules
+export { VALID_CLAUDE_COLORS, ModelSchema };

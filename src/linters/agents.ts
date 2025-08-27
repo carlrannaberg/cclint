@@ -12,8 +12,8 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { glob } from 'glob';
 import matter from 'gray-matter';
-import { BaseLinterImpl, hasFrontmatter, validateColor, shouldSkipFile, handleZodValidationIssue } from './base.js';
-import { getAgentSchema, KNOWN_CLAUDE_TOOLS, CSS_NAMED_COLORS } from '../lib/schemas.js';
+import { BaseLinterImpl, hasFrontmatter, shouldSkipFile, handleZodValidationIssue } from './base.js';
+import { getAgentSchema, KNOWN_CLAUDE_TOOLS } from '../lib/schemas.js';
 import { detectProjectInfo } from '../lib/project-detection.js';
 import type { LintResult, LintOptions, FrontmatterData, CclintConfig, ProjectInfo } from '../types/index.js';
 
@@ -123,9 +123,10 @@ export class AgentsLinter extends BaseLinterImpl {
     filePath: string,
     config?: CclintConfig
   ): Promise<void> {
-    // Validate tools field
-    if (frontmatter.tools !== undefined) {
-      this.validateTools(frontmatter.tools, result);
+    // Validate tools field (handle both 'tools' and 'allowed-tools')
+    const toolsField = frontmatter.tools ?? frontmatter['allowed-tools'];
+    if (toolsField !== undefined) {
+      this.validateTools(toolsField, result, frontmatter.tools !== undefined ? 'tools' : 'allowed-tools');
     }
 
 
@@ -157,24 +158,33 @@ export class AgentsLinter extends BaseLinterImpl {
     );
   }
 
-  private validateTools(tools: unknown, result: LintResult): void {
-    if (tools === null || tools === '') {
-      this.addWarning(result, 'Empty tools field - this will grant NO tools. Remove the field entirely to inherit all tools, or specify tools explicitly');
+  private validateTools(tools: unknown, result: LintResult, fieldName: string = 'tools'): void {
+    if (tools === null || tools === '' || (Array.isArray(tools) && tools.length === 0)) {
+      this.addWarning(result, `Empty ${fieldName} field - this will grant NO tools. Remove the field entirely to inherit all tools, or specify tools explicitly`);
       return;
     }
 
-    if (Array.isArray(tools)) {
-      this.addError(result, 'tools field must be a comma-separated string, not an array');
+    let toolList: string[] = [];
+    
+    // Handle both string and array formats
+    if (typeof tools === 'string') {
+      if (tools === '*') {
+        // Valid - all tools
+        return;
+      }
+      // Parse comma-separated string
+      toolList = tools.split(',').map((t: string) => t.trim()).filter((t: string) => t !== '');
+    } else if (Array.isArray(tools)) {
+      // Already an array, validate each element is a string
+      if (!tools.every((t: unknown) => typeof t === 'string')) {
+        this.addError(result, `${fieldName} array must contain only strings`);
+        return;
+      }
+      toolList = tools as string[];
+    } else {
+      this.addError(result, `${fieldName} field must be a string, array, or "*"`);
       return;
     }
-
-    if (typeof tools !== 'string') {
-      this.addError(result, 'tools field must be a string');
-      return;
-    }
-
-    // Parse and validate individual tools
-    const toolList = tools.split(',').map((t: string) => t.trim()).filter((t: string) => t !== '');
     
     if (toolList.length === 0) {
       this.addWarning(result, 'Empty tools field detected - this will grant NO tools');

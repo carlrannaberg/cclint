@@ -100,7 +100,7 @@ displayName: "Full Featured Agent"
 description: A comprehensive test agent
 category: testing
 tools: "Bash, Read, Write, Edit"
-color: "#FF5733"
+color: "blue"
 bundle: ["core", "extended"]
 ---
 
@@ -163,24 +163,24 @@ bundle: "not an array"  # should be array
       expect(results[0].errors.length).toBeGreaterThan(0);
     });
 
-    it('should report invalid tools format', async () => {
+    it('should accept array tools format', async () => {
       const agentContent = `---
-name: invalid-tools
-description: Agent with invalid tools
-tools: ["Bash", "Read"]  # should be string, not array
+name: array-tools
+description: Agent with array tools
+tools: ["Bash", "Read"]
 ---
 
-# Invalid Tools Agent
+# Array Tools Agent
 `;
 
-      const agentPath = path.join(agentsDir, 'invalid-tools.md');
+      const agentPath = path.join(agentsDir, 'array-tools.md');
       await fs.writeFile(agentPath, agentContent);
 
       const results = await linter.lint(tempDir, mockOptions);
       
       expect(results).toHaveLength(1);
-      expect(results[0].valid).toBe(false);
-      expect(results[0].errors.some(err => err.includes('tools field must be a comma-separated string'))).toBe(true);
+      expect(results[0].valid).toBe(true);
+      expect(results[0].errors).toHaveLength(0);
     });
   });
 
@@ -263,7 +263,7 @@ tools: "Bash(git:*, Read(pattern"
   });
 
   describe('color validation', () => {
-    it('should accept valid hex colors', async () => {
+    it('should reject hex colors', async () => {
       const agentContent = `---
 name: hex-color
 description: Agent with hex color
@@ -279,7 +279,8 @@ color: "#FF5733"
       const results = await linter.lint(tempDir, mockOptions);
       
       expect(results).toHaveLength(1);
-      expect(results[0].warnings.every(warn => !warn.includes('Invalid hex color'))).toBe(true);
+      expect(results[0].valid).toBe(false);
+      expect(results[0].errors.some(err => err.includes('not a valid Claude Code color'))).toBe(true);
     });
 
     it('should accept valid CSS named colors', async () => {
@@ -301,23 +302,24 @@ color: "blue"
       expect(results[0].suggestions.every(sugg => !sugg.includes('not a standard CSS named color'))).toBe(true);
     });
 
-    it('should warn about invalid hex colors', async () => {
+    it('should reject invalid color names', async () => {
       const agentContent = `---
-name: invalid-hex
-description: Agent with invalid hex color
-color: "#XYZ"
+name: invalid-color
+description: Agent with invalid color
+color: "brown"
 ---
 
-# Invalid Hex Agent
+# Invalid Color Agent
 `;
 
-      const agentPath = path.join(agentsDir, 'invalid-hex.md');
+      const agentPath = path.join(agentsDir, 'invalid-color.md');
       await fs.writeFile(agentPath, agentContent);
 
       const results = await linter.lint(tempDir, mockOptions);
       
       expect(results).toHaveLength(1);
-      expect(results[0].warnings.some(warn => warn.includes('Invalid hex color format'))).toBe(true);
+      expect(results[0].valid).toBe(false);
+      expect(results[0].errors.some(err => err.includes('not a valid Claude Code color'))).toBe(true);
     });
   });
 

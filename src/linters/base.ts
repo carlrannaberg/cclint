@@ -292,20 +292,6 @@ export function validateToolPattern(tool: string): string[] {
 }
 
 /**
- * Check if color is valid (hex or CSS named color)
- */
-export function validateColor(color: string, cssColors: Set<string>): boolean {
-  // Check hex color format
-  const hexColorRegex = /^#[0-9A-F]{6}([0-9A-F]{2})?$/i;
-  if (color.startsWith('#')) {
-    return hexColorRegex.test(color);
-  }
-  
-  // Check CSS named color
-  return cssColors.has(color.toLowerCase());
-}
-
-/**
  * Check if a file should be skipped based on exclude patterns
  */
 export function shouldSkipFile(filePath: string, excludePatterns?: string[]): boolean {
@@ -384,8 +370,8 @@ export function handleZodValidationIssue(
       }
     }
   } else if (issue.code === 'custom' && field === 'color') {
-    // Color validation failures should be warnings, not errors
-    addWarning(result, issue.message);
+    // Color validation failures are errors since only 8 Claude Code colors are valid
+    addError(result, issue.message);
   } else {
     addError(result, `${field}: ${issue.message}`);
   }
