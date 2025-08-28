@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2025-08-28
+
+### Fixed
+- **SDK Project Root Detection**: Fixed SDK methods (`lintAgents`, `lintCommands`, `lintSettings`, `lintClaudeMd`) not working when called with subdirectory paths like `.claude/commands` or `.claude/agents`
+- **Pattern Matching**: Replaced custom minimatch implementation with picomatch for faster, more accurate glob pattern matching in file filtering options
+
+### Added
+- **picomatch Dependency**: Added picomatch for better glob pattern support in `includeFiles`/`excludeFiles` options
+
+### Technical
+- Enhanced `detectProject()` function to properly traverse up from subdirectories to find project root
+- Improved TypeScript typing with proper picomatch type definitions
+
 ## [0.2.6] - 2025-08-28
 
 ### Added
@@ -156,7 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.7...HEAD
+[0.2.7]: https://github.com/carlrannaberg/cclint/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/carlrannaberg/cclint/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...v0.2.4
