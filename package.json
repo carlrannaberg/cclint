@@ -1,6 +1,6 @@
 {
   "name": "@carlrannaberg/cclint",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Claude Code Lint - A comprehensive linting tool for Claude Code projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
