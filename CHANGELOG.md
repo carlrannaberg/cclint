@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2025-08-28
+
+### Fixed
+- **JSON Format Output**: Fixed JSON format to output clean JSON without progress messages for programmatic usage
+  - Progress messages are now suppressed when `--format json` is specified
+  - Ensures JSON output is suitable for CI/CD pipelines and automated processing
+  - Applied same clean output logic to markdown format for consistency
+- **Production Code Quality**: Resolved hardcoded version TODOs by implementing proper version reading
+  - Added `getPackageVersion()` function to read actual version from package.json
+  - Replaced static '1.0.0' placeholders with dynamic version loading
+  - Added module-level version caching for performance optimization
+
+### Technical
+- Enhanced CLI format handling to separate progress output from format-specific content
+- Improved metadata generation with accurate version information
+- Better separation of concerns between progress indicators and structured output
+
 ## [0.2.7] - 2025-08-28
 
 ### Fixed
@@ -169,7 +186,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.8...HEAD
+[0.2.8]: https://github.com/carlrannaberg/cclint/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/carlrannaberg/cclint/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/carlrannaberg/cclint/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...v0.2.5
