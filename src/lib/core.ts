@@ -11,6 +11,7 @@
  */
 
 import * as path from 'path';
+import picomatch from 'picomatch';
 import { AgentsLinter } from '../linters/agents.js';
 import { CommandsLinter } from '../linters/commands.js';
 import { SettingsLinter } from '../linters/settings.js';
@@ -154,7 +155,7 @@ export async function lintProject(
   if (options.includeFiles && options.includeFiles.length > 0) {
     filteredResults = filteredResults.filter(result => 
       options.includeFiles!.some(pattern => 
-        result.file.includes(pattern) || minimatch(result.file, pattern)
+        result.file.includes(pattern) || picomatch(pattern)(result.file)
       )
     );
   }
@@ -162,7 +163,7 @@ export async function lintProject(
   if (options.excludeFiles && options.excludeFiles.length > 0) {
     filteredResults = filteredResults.filter(result => 
       !options.excludeFiles!.some(pattern => 
-        result.file.includes(pattern) || minimatch(result.file, pattern)
+        result.file.includes(pattern) || picomatch(pattern)(result.file)
       )
     );
   }
@@ -370,11 +371,12 @@ export async function loadProjectConfig(projectRoot?: string): Promise<CclintCon
 /**
  * Detect project information and structure
  * 
- * @param projectRoot - Path to the project root directory
+ * @param projectRoot - Path to the project root directory or any subdirectory within the project
  * @returns Promise resolving to project information
  */
 export async function detectProject(projectRoot?: string): Promise<ProjectInfo> {
-  const root = projectRoot ? await sanitizePath(projectRoot) : await findProjectRoot();
+  const startPath = projectRoot ? await sanitizePath(projectRoot) : process.cwd();
+  const root = await findProjectRoot(startPath);
   return await detectProjectInfo(root);
 }
 
@@ -411,15 +413,3 @@ async function runLinterOnFiles(
   }
 }
 
-// Simple minimatch implementation for basic pattern matching
-// In a real implementation, we might want to use the 'minimatch' package
-function minimatch(str: string, pattern: string): boolean {
-  // Convert glob pattern to regex
-  const regexPattern = pattern
-    .replace(/\./g, '\\.')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.');
-  
-  const regex = new RegExp(`^${regexPattern}$`);
-  return regex.test(str);
-}
