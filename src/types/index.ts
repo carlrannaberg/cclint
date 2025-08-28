@@ -37,6 +37,20 @@ export interface LintOptions {
 }
 
 /**
+ * SDK-specific linting options that extend the base LintOptions
+ * but exclude CLI-specific properties like format and outputFile
+ */
+export interface SDKLintOptions extends Omit<LintOptions, 'format' | 'outputFile' | 'root'> {
+  // Advanced filtering options
+  includeFiles?: string[];
+  excludeFiles?: string[];
+  
+  // SDK-specific options
+  returnRawResults?: boolean;
+  includeMetadata?: boolean;
+}
+
+/**
  * Generic frontmatter data structure
  */
 export interface FrontmatterData {
@@ -128,6 +142,23 @@ export interface LintSummary {
   totalSuggestions: number;
   duration: number;
   results: LintResult[];
+}
+
+/**
+ * Enhanced lint summary with optional metadata for SDK usage
+ */
+export interface EnhancedLintSummary extends LintSummary {
+  metadata?: {
+    duration: number;
+    nodeVersion: string;
+    cclintVersion: string;
+    projectRoot: string;
+    configPath?: string;
+    linterCount?: number;
+    fileCount?: number;
+    parallelExecution: boolean;
+    concurrency: number;
+  };
 }
 
 export interface BaseLinter {

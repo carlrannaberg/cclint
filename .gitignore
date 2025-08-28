@@ -56,3 +56,7 @@ reports/
 
 # Backup files
 *.backup-*
+
+# Simple Task Master - User tasks are git-ignored
+.simple-task-master/tasks/
+.simple-task-master/lock

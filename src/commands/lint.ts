@@ -1,14 +1,10 @@
 import ora from 'ora';
-import { AgentsLinter } from '../linters/agents.js';
-import { CommandsLinter } from '../linters/commands.js';
-import { SettingsLinter } from '../linters/settings.js';
-import { ClaudeMdLinter } from '../linters/claude-md.js';
 import { ConsoleReporter } from '../reporters/console.js';
 import { JsonReporter } from '../reporters/json.js';
 import { MarkdownReporter } from '../reporters/markdown.js';
-import { findProjectRoot, detectProjectInfo } from '../lib/project-detection.js';
-import { calculateSummary, writeReportToFile, getExitCode, sanitizePath, PathSecurityError } from '../lib/utils.js';
-import type { LintOptions, LintResult, BaseLinter, LintSummary } from '../types/index.js';
+import { lintProject } from '../lib/core.js';
+import { writeReportToFile, getExitCode, sanitizePath, PathSecurityError } from '../lib/utils.js';
+import type { LintOptions, LintSummary, SDKLintOptions } from '../types/index.js';
 
 /**
  * Main lint command implementation - coordinates all linters and generates reports.
@@ -57,11 +53,10 @@ import type { LintOptions, LintResult, BaseLinter, LintSummary } from '../types/
  * ```
  */
 export async function lintCommand(options: LintOptions): Promise<void> {
-  const startTime = Date.now();
   let spinner: ReturnType<typeof ora> | null = null;
 
   try {
-    // Find and sanitize project root
+    // Determine project root
     let projectRoot: string;
     
     if (options.root) {
@@ -76,52 +71,32 @@ export async function lintCommand(options: LintOptions): Promise<void> {
         throw error;
       }
     } else {
-      // Auto-detect project root (already safe since it starts from cwd)
-      projectRoot = await findProjectRoot();
+      // Use current working directory - core functions will handle project detection
+      projectRoot = process.cwd();
     }
     
     if (!options.quiet) {
       console.log(`Linting Claude Code project at: ${projectRoot}`);
-      spinner = ora('Detecting project structure...').start();
+      spinner = ora('Running linters...').start();
     }
 
-    // Detect project info
-    const projectInfo = await detectProjectInfo(projectRoot);
-    
-    if (spinner) {
-      spinner.text = 'Running linters...';
-    }
+    // Convert CLI options to SDK options
+    const sdkOptions: SDKLintOptions = {
+      quiet: options.quiet,
+      verbose: options.verbose,
+      failOn: options.failOn,
+      customSchemas: options.customSchemas,
+      parallel: options.parallel,
+      concurrency: options.concurrency,
+      includeMetadata: false // CLI doesn't need internal metadata
+    };
 
-    // Initialize linters
-    const linters: BaseLinter[] = [
-      new AgentsLinter(),
-      new CommandsLinter(), 
-      new SettingsLinter(),
-      new ClaudeMdLinter(),
-    ];
-
-    // Run all linters
-    const allResults: LintResult[] = [];
-    
-    for (const linter of linters) {
-      if (spinner) {
-        spinner.text = `Running ${linter.name} linter...`;
-      }
-      
-      try {
-        const results = await linter.lint(projectRoot, options, projectInfo);
-        allResults.push(...results);
-      } catch (error) {
-        console.error(`Error running ${linter.name} linter:`, error);
-      }
-    }
+    // Use the core linting function
+    const summary = await lintProject(projectRoot, sdkOptions);
 
     if (spinner) {
       spinner.succeed('Linting completed');
     }
-
-    // Calculate summary
-    const summary = calculateSummary(allResults, startTime);
 
     // Generate reports
     await generateReports(summary, options);
@@ -140,33 +115,45 @@ export async function lintCommand(options: LintOptions): Promise<void> {
 }
 
 async function generateReports(summary: LintSummary, options: LintOptions): Promise<void> {
-  // Console output (always)
-  const consoleReporter = new ConsoleReporter(options);
-  consoleReporter.report(summary);
-
-  // File output (if requested)
-  if (options.outputFile) {
-    let content: string;
-    
-    switch (options.format) {
-      case 'json':
-        const jsonReporter = new JsonReporter();
-        content = jsonReporter.report(summary);
-        break;
+  // Stdout output based on format
+  switch (options.format) {
+    case 'json':
+      const jsonReporter = new JsonReporter();
+      const jsonContent = jsonReporter.report(summary);
+      console.log(jsonContent);
       
-      case 'markdown':
-        const markdownReporter = new MarkdownReporter();
-        content = markdownReporter.report(summary);
-        break;
-      
-      default:
-        throw new Error(`Unsupported output format: ${options.format}`);
-    }
-
-    await writeReportToFile(content, options.outputFile);
+      // File output (if requested)
+      if (options.outputFile) {
+        await writeReportToFile(jsonContent, options.outputFile);
+        if (!options.quiet) {
+          console.error(`📄 Report saved to: ${options.outputFile}`);
+        }
+      }
+      break;
     
-    if (!options.quiet) {
-      console.log(`\n📄 Report saved to: ${options.outputFile}`);
-    }
+    case 'markdown':
+      const markdownReporter = new MarkdownReporter();
+      const markdownContent = markdownReporter.report(summary);
+      console.log(markdownContent);
+      
+      // File output (if requested)
+      if (options.outputFile) {
+        await writeReportToFile(markdownContent, options.outputFile);
+        if (!options.quiet) {
+          console.error(`📄 Report saved to: ${options.outputFile}`);
+        }
+      }
+      break;
+    
+    case 'console':
+    default:
+      const consoleReporter = new ConsoleReporter(options);
+      consoleReporter.report(summary);
+      
+      // File output not supported for console format - it prints directly
+      if (options.outputFile) {
+        console.error('Warning: File output not supported with console format. Use --format json or markdown.');
+      }
+      break;
   }
 }
