@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2025-08-28
+
+### Changed
+- **BREAKING**: Aligned validation strictly with official Claude Code specifications
+  - Removed `category` field from command frontmatter base schema
+  - Removed `displayName` and `bundle` fields from agent frontmatter base schema
+  - These fields are now only available through custom schema extensions
+- Color validation now strictly enforces 8 official Claude Code colors only
+- TypeScript interfaces updated to match official fields exactly
+
+### Fixed
+- README now accurately documents only official Claude Code fields
+- Test data updated to use custom extensions for non-official fields
+- Removed all references to unofficial fields from base validation logic
+
+### Documentation
+- Added clear documentation of official agent/subagent frontmatter fields
+- Added clear documentation of official command frontmatter fields
+- Updated README to explicitly state which fields are official vs. custom
+
 ## [0.2.2] - 2025-08-28
 
 ### Added
@@ -95,7 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/carlrannaberg/cclint/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/carlrannaberg/cclint/compare/v0.1.0...v0.2.0
