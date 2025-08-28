@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-08-28
+
+### Fixed
+- File discovery now follows symlinks in `.claude` directories
+  - Added `follow: true` option to glob pattern matching
+  - Enables proper linting of symlinked agent and command files
+  - Resolves issue where symlinked markdown files were not detected
+
 ## [0.2.0] - 2025-08-28
 
 ### Added
@@ -66,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/carlrannaberg/cclint/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/carlrannaberg/cclint/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/carlrannaberg/cclint/releases/tag/v0.1.0

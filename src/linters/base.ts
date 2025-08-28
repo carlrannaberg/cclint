@@ -176,7 +176,7 @@ export abstract class BaseLinterImpl implements BaseLinter {
       try {
         const glob = await import('glob');
         const pattern = path.join(dir, '**/*.md');
-        const files = await glob.glob(pattern);
+        const files = await glob.glob(pattern, { follow: true });
         
         for (const file of files) {
           // Skip excluded patterns
