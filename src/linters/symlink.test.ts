@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AgentsLinter } from './agents.js';
 import { CommandsLinter } from './commands.js';
 import { CClint } from '../lib/sdk.js';
+import * as utils from '../lib/utils.js';
 import type { LintOptions } from '../types/index.js';
 import * as os from 'os';
 
@@ -301,6 +302,148 @@ Content`);
       expect(normalized.parallel).toBe(false);
       expect(normalized.concurrency).toBe(5);
       expect(normalized.followSymlinks).toBe(true);
+    });
+  });
+
+  describe('SDK Methods with Mocked Security (Full Integration)', () => {
+    beforeEach(() => {
+      // Mock sanitizePath to bypass security for testing
+      vi.spyOn(utils, 'sanitizePath').mockImplementation(async (inputPath: string) => {
+        // Just return the realpath for test directories
+        return await fs.realpath(inputPath);
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should handle followSymlinks option in lintAgents() end-to-end', async () => {
+      // Create actual agent file outside .claude directory
+      const actualAgentPath = path.join(tempDir, 'actual-agents', 'integration-agent.md');
+      await fs.writeFile(actualAgentPath, `---
+name: integration-agent
+description: Integration test agent for SDK
+---
+Full integration test content`);
+
+      // Create symlink in .claude/agents
+      const symlinkPath = path.join(tempDir, '.claude', 'agents', 'integration-agent.md');
+      await fs.symlink(actualAgentPath, symlinkPath);
+
+      const sdk = new CClint();
+      
+      // Test without followSymlinks (should find 0 agents)
+      const resultsWithoutSymlinks = await sdk.lintAgents(tempDir, { followSymlinks: false });
+      expect(resultsWithoutSymlinks).toHaveLength(0);
+      
+      // Test with followSymlinks (should find 1 agent)
+      const resultsWithSymlinks = await sdk.lintAgents(tempDir, { followSymlinks: true });
+      expect(resultsWithSymlinks).toHaveLength(1);
+      expect(resultsWithSymlinks[0].file).toBe(symlinkPath);
+      expect(resultsWithSymlinks[0].valid).toBe(true);
+    });
+
+    it('should handle followSymlinks option in lintCommands() end-to-end', async () => {
+      // Create actual command file outside .claude directory
+      const actualCommandPath = path.join(tempDir, 'actual-commands', 'integration-command.md');
+      await fs.writeFile(actualCommandPath, `---
+description: Integration test command for SDK
+allowed-tools: "Read, Write"
+---
+
+# Integration Test Command
+
+Full integration test command content with arguments: $ARGUMENTS`);
+
+      // Create symlink in .claude/commands
+      const symlinkPath = path.join(tempDir, '.claude', 'commands', 'integration-command.md');
+      await fs.symlink(actualCommandPath, symlinkPath);
+
+      const sdk = new CClint();
+      
+      // Test without followSymlinks (should find 0 commands)
+      const resultsWithoutSymlinks = await sdk.lintCommands(tempDir, { followSymlinks: false });
+      expect(resultsWithoutSymlinks).toHaveLength(0);
+      
+      // Test with followSymlinks (should find 1 command)
+      const resultsWithSymlinks = await sdk.lintCommands(tempDir, { followSymlinks: true });
+      expect(resultsWithSymlinks).toHaveLength(1);
+      expect(resultsWithSymlinks[0].file).toBe(symlinkPath);
+      expect(resultsWithSymlinks[0].valid).toBe(true);
+    });
+
+    it('should have consistent behavior between lintProject and specialized methods', async () => {
+      // Create multiple files with symlinks
+      const agentPath = path.join(tempDir, 'actual-agents', 'consistency-agent.md');
+      await fs.writeFile(agentPath, `---
+name: consistency-agent
+description: Consistency test agent
+tools: ["Read", "Write"]
+---
+Agent content`);
+
+      const commandPath = path.join(tempDir, 'actual-commands', 'consistency-command.md');
+      await fs.writeFile(commandPath, `---
+description: Consistency test command
+allowed-tools: "Read, Write"
+---
+
+# Command`);
+
+      // Create symlinks
+      const agentSymlink = path.join(tempDir, '.claude', 'agents', 'consistency-agent.md');
+      const commandSymlink = path.join(tempDir, '.claude', 'commands', 'consistency-command.md');
+      await fs.symlink(agentPath, agentSymlink);
+      await fs.symlink(commandPath, commandSymlink);
+
+      const sdk = new CClint();
+      const options = { followSymlinks: true };
+      
+      // Get results from all methods
+      const projectResult = await sdk.lintProject(tempDir, options);
+      const agentResults = await sdk.lintAgents(tempDir, options);
+      const commandResults = await sdk.lintCommands(tempDir, options);
+      
+      // Verify all methods find files when followSymlinks is enabled
+      expect(agentResults.length).toBe(1);
+      expect(commandResults.length).toBe(1);
+      expect(projectResult.totalFiles).toBeGreaterThanOrEqual(2);
+      
+      // Verify the files found are the symlinks
+      expect(agentResults[0].file).toBe(agentSymlink);
+      expect(commandResults[0].file).toBe(commandSymlink);
+      
+      // Verify all are valid
+      expect(agentResults[0].valid).toBe(true);
+      expect(commandResults[0].valid).toBe(true);
+    });
+
+    it('should properly handle both followSymlinks: true and false states', async () => {
+      // Create file with symlink
+      const actualPath = path.join(tempDir, 'actual-agents', 'toggle-test.md');
+      await fs.writeFile(actualPath, `---
+name: toggle-test
+description: Test followSymlinks toggle behavior
+---
+Content`);
+
+      const symlinkPath = path.join(tempDir, '.claude', 'agents', 'toggle-test.md');
+      await fs.symlink(actualPath, symlinkPath);
+
+      const sdk = new CClint();
+      
+      // Test false state
+      const resultsFalse = await sdk.lintAgents(tempDir, { followSymlinks: false });
+      expect(resultsFalse).toHaveLength(0);
+      
+      // Test true state
+      const resultsTrue = await sdk.lintAgents(tempDir, { followSymlinks: true });
+      expect(resultsTrue).toHaveLength(1);
+      
+      // Test default state (should be false)
+      const resultsDefault = await sdk.lintAgents(tempDir, {});
+      expect(resultsDefault).toHaveLength(0);
     });
   });
 });

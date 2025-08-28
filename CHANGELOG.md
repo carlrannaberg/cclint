@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2025-08-28
+
+### Added
+- Comprehensive SDK integration tests for symlink behavior using mocked security
+- End-to-end validation that `lintAgents()` and `lintCommands()` properly handle `followSymlinks` option
+- Full test coverage for SDK surface area symlink consistency
+
 ## [0.2.4] - 2025-08-28
 
 ### Fixed
@@ -126,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...v0.2.2
