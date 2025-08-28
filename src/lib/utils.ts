@@ -24,6 +24,7 @@ export class PathSecurityError extends Error {
  * @throws PathSecurityError if the path is invalid or insecure
  */
 export async function sanitizePath(inputPath: string, allowedBasePath: string = process.cwd()): Promise<string> {
+
   if (!inputPath || typeof inputPath !== 'string') {
     throw new PathSecurityError('Path must be a non-empty string', inputPath || '');
   }

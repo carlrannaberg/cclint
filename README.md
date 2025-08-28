@@ -48,6 +48,28 @@ cclint --quiet
 cclint --verbose
 ```
 
+### Specialized Linting
+
+Lint only specific file types for faster, focused validation:
+
+```bash
+# Lint only agent definition files
+cclint agents
+
+# Lint only command definition files  
+cclint commands
+
+# Lint only settings.json files
+cclint settings
+
+# Lint only CLAUDE.md context files
+cclint context
+
+# Use with options for specialized linting
+cclint agents --verbose --follow-symlinks
+cclint commands --root /path/to/project --quiet
+```
+
 ### Report Generation
 
 ```bash

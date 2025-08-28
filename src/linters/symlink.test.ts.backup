@@ -340,10 +340,7 @@ Full integration test content`);
       // Test with followSymlinks (should find 1 agent)
       const resultsWithSymlinks = await sdk.lintAgents(tempDir, { followSymlinks: true });
       expect(resultsWithSymlinks).toHaveLength(1);
-      // The implementation returns resolved real paths for security consistency
-      // On macOS, /var/folders is a symlink to /private/var/folders
-      expect(resultsWithSymlinks[0].file).toMatch(/integration-agent.md$/);
-      expect(resultsWithSymlinks[0].file.includes(path.basename(tempDir))).toBe(true);
+      expect(resultsWithSymlinks[0].file).toBe(symlinkPath);
       expect(resultsWithSymlinks[0].valid).toBe(true);
     });
 
@@ -372,9 +369,7 @@ Full integration test command content with arguments: $ARGUMENTS`);
       // Test with followSymlinks (should find 1 command)
       const resultsWithSymlinks = await sdk.lintCommands(tempDir, { followSymlinks: true });
       expect(resultsWithSymlinks).toHaveLength(1);
-      // The implementation returns resolved real paths for security consistency
-      expect(resultsWithSymlinks[0].file).toMatch(/integration-command.md$/);
-      expect(resultsWithSymlinks[0].file.includes(path.basename(tempDir))).toBe(true);
+      expect(resultsWithSymlinks[0].file).toBe(symlinkPath);
       expect(resultsWithSymlinks[0].valid).toBe(true);
     });
 
@@ -416,8 +411,8 @@ allowed-tools: "Read, Write"
       expect(projectResult.totalFiles).toBeGreaterThanOrEqual(2);
       
       // Verify the files found are the symlinks
-      // Verify the files found have the correct filenames (resolved paths may differ)
-      // The implementation returns resolved real paths for security consistency
+      expect(agentResults[0].file).toBe(agentSymlink);
+      expect(commandResults[0].file).toBe(commandSymlink);
       
       // Verify all are valid
       expect(agentResults[0].valid).toBe(true);

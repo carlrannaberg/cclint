@@ -85,7 +85,8 @@ export class CClint {
     const linter = new AgentsLinter();
     const lintOptions = this.normalizeOptions(options);
     const projectInfo = await detectProject(projectRoot);
-    return await linter.lint(projectRoot || process.cwd(), lintOptions, projectInfo);
+    // Use the sanitized root from projectInfo to ensure consistency
+    return await linter.lint(projectInfo.root, lintOptions, projectInfo);
   }
 
   /**
@@ -102,7 +103,8 @@ export class CClint {
     const linter = new CommandsLinter();
     const lintOptions = this.normalizeOptions(options);
     const projectInfo = await detectProject(projectRoot);
-    return await linter.lint(projectRoot || process.cwd(), lintOptions, projectInfo);
+    // Use the sanitized root from projectInfo to ensure consistency
+    return await linter.lint(projectInfo.root, lintOptions, projectInfo);
   }
 
   /**
@@ -119,7 +121,8 @@ export class CClint {
     const linter = new SettingsLinter();
     const lintOptions = this.normalizeOptions(options);
     const projectInfo = await detectProject(projectRoot);
-    return await linter.lint(projectRoot || process.cwd(), lintOptions, projectInfo);
+    // Use the sanitized root from projectInfo to ensure consistency
+    return await linter.lint(projectInfo.root, lintOptions, projectInfo);
   }
 
   /**
@@ -136,7 +139,8 @@ export class CClint {
     const linter = new ClaudeMdLinter();
     const lintOptions = this.normalizeOptions(options);
     const projectInfo = await detectProject(projectRoot);
-    return await linter.lint(projectRoot || process.cwd(), lintOptions, projectInfo);
+    // Use the sanitized root from projectInfo to ensure consistency
+    return await linter.lint(projectInfo.root, lintOptions, projectInfo);
   }
 
   /**

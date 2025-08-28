@@ -435,9 +435,9 @@ The existing CLI interface remains completely unchanged:
 
 ```bash
 # All existing CLI commands work exactly the same
-npx cclint lint
-npx cclint lint --format json
-npx cclint lint --fail-on warning --verbose
+npx cclint
+npx cclint --format json
+npx cclint --fail-on warning --verbose
 ```
 
 ## Testing Strategy
@@ -744,7 +744,7 @@ describe('SDK Security', () => {
 ### CLI Usage
 ```bash
 npm install -g cclint
-cclint lint --format json
+cclint --format json
 ```
 
 ### SDK Usage  
