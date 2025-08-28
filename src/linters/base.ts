@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { promises as fs } from 'fs';
 import type { BaseLinter, LintResult, LintOptions, ProjectInfo, CclintConfig, FrontmatterData } from '../types/index.js';
 
 /**
@@ -160,7 +161,8 @@ export abstract class BaseLinterImpl implements BaseLinter {
   protected async findMarkdownFilesInDirectories(
     projectRoot: string,
     directories: string[],
-    config?: CclintConfig
+    config?: CclintConfig,
+    options?: { followSymlinks?: boolean }
   ): Promise<string[]> {
     const allFiles: string[] = [];
     const searchDirs = [...directories];
@@ -176,11 +178,68 @@ export abstract class BaseLinterImpl implements BaseLinter {
       try {
         const glob = await import('glob');
         const pattern = path.join(dir, '**/*.md');
-        const files = await glob.glob(pattern, { follow: true });
+        // Only follow symlinks if explicitly enabled (secure by default)
+        const globOptions = { 
+          follow: options?.followSymlinks === true 
+        };
+        
+        if (process.env.CCLINT_DEBUG) {
+          console.log(`Searching ${pattern} with options:`, globOptions);
+        }
+        
+        const files = await glob.glob(pattern, globOptions);
+        
+        if (process.env.CCLINT_DEBUG) {
+          console.log(`Found ${files.length} files in ${pattern}`);
+        }
         
         for (const file of files) {
           // Skip excluded patterns
           if (!shouldSkipFile(file, config?.rules?.excludePatterns)) {
+            // Check if file is a symlink
+            try {
+              const stats = await fs.lstat(file);
+              const isSymlink = stats.isSymbolicLink();
+              
+              if (isSymlink && !options?.followSymlinks) {
+                // Skip symlinks when not following them
+                if (process.env.CCLINT_DEBUG) {
+                  console.log(`Skipping symlink (followSymlinks=false): ${file}`);
+                }
+                continue;
+              }
+              
+              // If following symlinks, validate the target is within project root
+              if (isSymlink && options?.followSymlinks) {
+                try {
+                  const realPath = await fs.realpath(file);
+                  // Resolve project root too in case it has symlinks (e.g., /var -> /private/var on macOS)
+                  const realProjectRoot = await fs.realpath(projectRoot);
+                  const relative = path.relative(realProjectRoot, realPath);
+                  // Skip files that escape the project root via symlinks
+                  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+                    if (process.env.CCLINT_VERBOSE) {
+                      console.warn(`Skipping symlink that escapes project root: ${file} -> ${realPath}`);
+                    }
+                    continue;
+                  }
+                } catch (error) {
+                  // If realpath fails, it might be a broken symlink
+                  // Skip this file but continue processing others
+                  if (process.env.CCLINT_VERBOSE) {
+                    console.warn(`Skipping broken symlink: ${file}`, error);
+                  }
+                  continue;
+                }
+              }
+            } catch (error) {
+              // If lstat fails, skip the file
+              if (process.env.CCLINT_DEBUG) {
+                console.log(`Error checking file stats for ${file}:`, error);
+              }
+              continue;
+            }
+            
             allFiles.push(file);
           }
         }

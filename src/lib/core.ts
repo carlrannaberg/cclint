@@ -86,6 +86,7 @@ export async function lintProject(
     customSchemas: options.customSchemas ?? true,
     parallel: options.parallel ?? true,
     concurrency: options.concurrency ?? 10,
+    followSymlinks: options.followSymlinks ?? false,
   };
   
   // Initialize all linters
@@ -276,6 +277,7 @@ export async function lintFiles(
     customSchemas: options.customSchemas ?? true,
     parallel: options.parallel ?? true,
     concurrency: options.concurrency ?? 10,
+    followSymlinks: options.followSymlinks ?? false,
   };
   
   // Group files by linter type for efficiency

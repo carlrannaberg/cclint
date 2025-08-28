@@ -56,6 +56,7 @@ export async function main(): Promise<void> {
     .option('--custom-schemas', 'Enable custom schema validation (default: true)')
     .option('--no-parallel', 'Disable parallel file processing (process files sequentially)')
     .option('--concurrency <number>', 'Maximum number of files to process concurrently (default: 10)', '10')
+    .option('--follow-symlinks', 'Follow symlinks when discovering files (security: validates targets remain within project root)')
     .action(async (options) => {
       // Early validation for root path to provide better error messages
       if (options.root && !isPathSafe(options.root)) {
@@ -74,6 +75,7 @@ export async function main(): Promise<void> {
         customSchemas: options.customSchemas !== false,
         parallel: !options.noParallel,
         concurrency: parseInt(options.concurrency, 10),
+        followSymlinks: options.followSymlinks === true,
       });
     });
 

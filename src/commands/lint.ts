@@ -88,6 +88,7 @@ export async function lintCommand(options: LintOptions): Promise<void> {
       customSchemas: options.customSchemas,
       parallel: options.parallel,
       concurrency: options.concurrency,
+      followSymlinks: options.followSymlinks,
       includeMetadata: false // CLI doesn't need internal metadata
     };
 

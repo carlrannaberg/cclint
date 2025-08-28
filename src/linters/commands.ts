@@ -26,7 +26,12 @@ export class CommandsLinter extends BaseLinterImpl {
     ];
 
     // Find all markdown files in the command directories
-    const files = await this.findMarkdownFilesInDirectories(projectRoot, commandDirs, info.cclintConfig);
+    const files = await this.findMarkdownFilesInDirectories(
+      projectRoot, 
+      commandDirs, 
+      info.cclintConfig,
+      { followSymlinks: options.followSymlinks }
+    );
     
     // Lint each file using the common pattern with parallel processing support
     return await this.lintFiles(

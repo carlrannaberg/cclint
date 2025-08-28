@@ -74,6 +74,75 @@ cclint --fail-on suggestion
 cclint --no-custom-schemas
 ```
 
+### Symlink Support
+
+```bash
+# Follow symlinks when discovering files (secure by default)
+cclint --follow-symlinks
+
+# Symlinks are NOT followed by default for security
+# When enabled, validates that symlink targets remain within project root
+# Useful for projects with shared agent/command definitions
+```
+
+## SDK/Programmatic Usage
+
+CCLint can be used programmatically in your Node.js applications:
+
+```javascript
+import CClint from '@carlrannaberg/cclint';
+
+// Create linter instance
+const linter = new CClint();
+
+// Lint entire project
+const summary = await linter.lintProject('./my-project', {
+  quiet: true,
+  followSymlinks: true  // Enable symlink support
+});
+
+// Lint specific file types
+const agentResults = await linter.lintAgents('./my-project');
+const commandResults = await linter.lintCommands('./my-project');
+```
+
+### Return Types Explained
+
+**`lintProject()`** returns a `LintSummary`:
+```javascript
+{
+  totalFiles: 35,
+  validFiles: 24,
+  totalErrors: 11,
+  totalWarnings: 2,
+  totalSuggestions: 0,
+  duration: 150,
+  results: [...] // Array of all individual file results
+}
+```
+
+**`lintAgents()`, `lintCommands()`, etc.** return `LintResult[]`:
+```javascript
+[
+  {
+    file: '/path/to/agent.md',
+    valid: true,
+    errors: [],
+    warnings: [],
+    suggestions: [],
+    missingFields: []
+  },
+  // ... more individual file results
+]
+```
+
+### Use Cases
+
+- **`lintProject()`**: Full project validation, CI/CD integration, comprehensive reports
+- **`lintAgents()`**: Validate only agent definitions, useful for agent-focused tools
+- **`lintCommands()`**: Validate only command definitions, useful for command management tools
+- **`lintSettings()`**: Validate settings.json, useful for configuration tools
+
 ## What It Checks
 
 ### Agent/Subagent Files (*.md with frontmatter)

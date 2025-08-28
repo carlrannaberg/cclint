@@ -34,6 +34,7 @@ export interface LintOptions {
   customSchemas?: boolean;
   parallel?: boolean;
   concurrency?: number;
+  followSymlinks?: boolean;
 }
 
 /**

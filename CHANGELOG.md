@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-08-28
+
+### Added
+- Proper symlink support with security validation
+  - New `--follow-symlinks` CLI option (secure by default, disabled)
+  - `followSymlinks` option in SDK for programmatic control
+  - Validates symlink targets remain within project root
+  - Handles broken and circular symlinks gracefully
+  - Comprehensive test coverage for symlink scenarios
+- SDK documentation with return type explanations and use cases
+
+### Fixed
+- Symlink detection now uses `fs.lstat()` to properly identify symlinks
+- Resolves both symlink target and project root for accurate path comparison (macOS /var -> /private/var issue)
+- Wrapped symlink validation in try-catch to prevent breaking file discovery
+
+### Security
+- Symlinks are NOT followed by default for security
+- When enabled, prevents path traversal attacks by validating targets
+- Skips symlinks that escape project boundaries
+
 ## [0.2.1] - 2025-08-28
 
 ### Fixed
@@ -74,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/carlrannaberg/cclint/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/carlrannaberg/cclint/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/carlrannaberg/cclint/releases/tag/v0.1.0

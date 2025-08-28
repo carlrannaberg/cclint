@@ -61,7 +61,12 @@ export class AgentsLinter extends BaseLinterImpl {
     ];
 
     // Find all markdown files in the agent directories
-    const files = await this.findMarkdownFilesInDirectories(projectRoot, agentDirs, info.cclintConfig);
+    const files = await this.findMarkdownFilesInDirectories(
+      projectRoot, 
+      agentDirs, 
+      info.cclintConfig,
+      { followSymlinks: options.followSymlinks }
+    );
     
     // Lint each file using the common pattern with parallel processing support
     return await this.lintFiles(
