@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2025-08-28
+
+### Added
+- **Specialized CLI Commands**: New focused linting commands for specific file types
+  - `cclint agents` - Lint only agent definition files
+  - `cclint commands` - Lint only command definition files  
+  - `cclint settings` - Lint only settings.json files
+  - `cclint context` - Lint only CLAUDE.md context files
+- **Professional Output**: All specialized commands now feature the same colored output, progress spinners, and professional summary formatting as the main command
+- **Factory Pattern**: Clean, maintainable command creation with 30% code reduction
+
+### Changed
+- **Streamlined CLI**: Default behavior now directly lints everything without requiring explicit `lint` command
+- **Improved User Experience**: Consistent professional interface across all commands with progress indicators and colored status messages
+
+### Removed
+- **Redundant Commands**: Removed unused `cclint init` and `cclint version` commands
+- **Explicit Lint Command**: `cclint lint` no longer needed - `cclint` now directly performs full project linting
+
+### Fixed
+- **CLI Path Consistency**: Specialized SDK methods now use consistent path sanitization for security
+- **Documentation**: Updated README and spec files to reflect new CLI structure
+
 ## [0.2.5] - 2025-08-28
 
 ### Added
@@ -133,7 +156,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/carlrannaberg/cclint/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...v0.2.3
