@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AgentsLinter } from './agents.js';
 import { CommandsLinter } from './commands.js';
+import { CClint } from '../lib/sdk.js';
 import type { LintOptions } from '../types/index.js';
 import * as os from 'os';
 
@@ -235,6 +236,71 @@ Content`);
       // Should not hang or crash
       const results = await linter.lint(tempDir, options);
       expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  describe('SDK normalizeOptions behavior', () => {
+    it('should properly map followSymlinks option from SDK to internal options', async () => {
+      // Test that the SDK properly normalizes options by checking the behavior
+      // We'll use the existing tempDir which works with direct linters
+      
+      // Create actual agent file
+      const actualAgentPath = path.join(tempDir, 'actual-agents', 'sdk-test.md');
+      await fs.writeFile(actualAgentPath, `---
+name: sdk-test
+description: Test SDK option mapping
+---
+Content`);
+
+      // Create symlink
+      const symlinkPath = path.join(tempDir, '.claude', 'agents', 'sdk-test.md');
+      await fs.symlink(actualAgentPath, symlinkPath);
+
+      // Test direct linters work (baseline)
+      const directLinter = new AgentsLinter();
+      const directResults = await directLinter.lint(tempDir, { followSymlinks: true });
+      expect(directResults).toHaveLength(1);
+
+      // Now test that SDK internal option normalization includes followSymlinks
+      const sdk = new CClint();
+      
+      // Use reflection to test the normalizeOptions method
+      // @ts-ignore - accessing private method for testing
+      const normalizedOptions = sdk.normalizeOptions({ followSymlinks: true });
+      expect(normalizedOptions.followSymlinks).toBe(true);
+      
+      // @ts-ignore - accessing private method for testing  
+      const normalizedOptionsDefault = sdk.normalizeOptions({});
+      expect(normalizedOptionsDefault.followSymlinks).toBe(false);
+      
+      // @ts-ignore - accessing private method for testing
+      const normalizedOptionsFalse = sdk.normalizeOptions({ followSymlinks: false });
+      expect(normalizedOptionsFalse.followSymlinks).toBe(false);
+    });
+
+    it('should have all expected options in normalizeOptions output', async () => {
+      const sdk = new CClint();
+      
+      // @ts-ignore - accessing private method for testing
+      const normalized = sdk.normalizeOptions({
+        quiet: true,
+        verbose: false,
+        failOn: 'warning',
+        customSchemas: false,
+        parallel: false,
+        concurrency: 5,
+        followSymlinks: true
+      });
+      
+      // Verify all options are properly mapped
+      expect(normalized.quiet).toBe(true);
+      expect(normalized.verbose).toBe(false);
+      expect(normalized.format).toBe('console');
+      expect(normalized.failOn).toBe('warning');
+      expect(normalized.customSchemas).toBe(false);
+      expect(normalized.parallel).toBe(false);
+      expect(normalized.concurrency).toBe(5);
+      expect(normalized.followSymlinks).toBe(true);
     });
   });
 });

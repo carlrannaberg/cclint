@@ -175,6 +175,7 @@ export class CClint {
       customSchemas: options?.customSchemas ?? true,
       parallel: options?.parallel ?? true,
       concurrency: options?.concurrency ?? 10,
+      followSymlinks: options?.followSymlinks ?? false,
     };
   }
 }

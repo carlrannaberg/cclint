@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2025-08-28
+
+### Fixed
+- **SDK Symlink Bug**: Fixed `lintAgents()` and `lintCommands()` methods not properly handling the `followSymlinks` option
+  - The `normalizeOptions()` method was missing the `followSymlinks` mapping
+  - Specialized SDK methods now correctly process symlinked files when `followSymlinks: true`
+  - All SDK methods now have consistent symlink behavior
+
+### Added
+- Tests for SDK symlink option handling to prevent regression
+
 ## [0.2.3] - 2025-08-28
 
 ### Changed
@@ -115,7 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/carlrannaberg/cclint/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/carlrannaberg/cclint/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/carlrannaberg/cclint/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/carlrannaberg/cclint/compare/v0.2.0...v0.2.1
