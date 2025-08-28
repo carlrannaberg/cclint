@@ -5,32 +5,11 @@ import type { CclintConfig } from '../types/index.js';
  * Validation schemas for Claude Code project files with extensible architecture
  */
 
-// Agent Categories
-const AgentCategorySchema = z.enum([
-  'general',
-  'framework', 
-  'testing',
-  'database',
-  'frontend',
-  'devops',
-  'build',
-  'linting',
-  'tools',
-  'universal',
-]);
-
 // Model options - valid Claude Code model values
 const ModelSchema = z
   .enum(['sonnet', 'opus', 'haiku', 'sonnet[1m]', 'opusplan', 'inherit'])
   .optional()
   .describe('Model to use (defaults to sonnet if not specified)');
-
-// Command Category
-const CommandCategorySchema = z.enum([
-  'workflow',
-  'ai-assistant', 
-  'validation',
-]).optional();
 
 // Valid Claude Code UI colors - limited to 8 standard colors
 const VALID_CLAUDE_COLORS = new Set([
@@ -84,14 +63,11 @@ const BaseAgentFrontmatterSchema = z.object({
 
 // Base Command frontmatter schema (extensible)
 const BaseCommandFrontmatterSchema = z.object({
-  // Official Claude Code fields
+  // Official Claude Code fields (all optional)
   'allowed-tools': z.string().optional().describe('List of tools the command can use'),
   'argument-hint': z.string().optional().describe('The arguments expected for the slash command'),
   description: z.string().optional().describe('Brief description of the command'),
   model: ModelSchema.describe('Model to use for this command'),
-
-  // Claudekit extension
-  category: CommandCategorySchema.describe('Category for organizing commands'),
 });
 
 // Base Claude settings.json schema (extensible)

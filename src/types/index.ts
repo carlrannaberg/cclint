@@ -171,12 +171,11 @@ export interface BaseLinter {
 export interface AgentFrontmatter {
   name: string;
   description: string;
-  tools?: string;
+  tools?: string | string[];
+  'allowed-tools'?: string | string[];
   model?: string;
-  category?: string;
   color?: string;
-  displayName?: string;
-  bundle?: string[];
+  [key: string]: unknown;
 }
 
 export interface CommandFrontmatter {
@@ -184,7 +183,6 @@ export interface CommandFrontmatter {
   'argument-hint'?: string;
   description?: string;
   model?: string;
-  category?: string;
 }
 
 export interface ClaudeSettings {

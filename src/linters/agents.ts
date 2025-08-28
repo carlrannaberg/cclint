@@ -22,9 +22,9 @@ import type { LintResult, LintOptions, FrontmatterData, CclintConfig, ProjectInf
  * 
  * Validates agent markdown files for:
  * - Required frontmatter fields (name, description)
- * - Optional fields (tools, model, category, color, displayName, bundle)
+ * - Optional fields (tools/allowed-tools, model, color)
  * - Tool pattern validation
- * - Color format validation (hex or CSS named colors)
+ * - Color format validation (8 valid Claude Code colors)
  * - Custom schema extensions via configuration
  * 
  * @extends {BaseLinterImpl}
@@ -140,19 +140,9 @@ export class AgentsLinter extends BaseLinterImpl {
       this.checkNameMatchesFilename(frontmatter.name, filePath, result);
     }
 
-    // Check for displayName suggestion
-    if (!frontmatter.displayName && frontmatter.name && typeof frontmatter.name === 'string') {
-      this.addSuggestion(result, 'Consider adding displayName for better UI presentation');
-    }
-
     // Check for duplicate description in content
     if (frontmatter.description && typeof frontmatter.description === 'string' && markdown.trim().startsWith(frontmatter.description)) {
       this.addSuggestion(result, 'Description is duplicated in markdown content');
-    }
-
-    // Check bundle field format
-    if (frontmatter.bundle && typeof frontmatter.bundle === 'string') {
-      this.addSuggestion(result, 'bundle field should be an array, not a string');
     }
 
     // Run custom validation if configured

@@ -23,8 +23,8 @@ export default {
   agentSchema: {
     extend: {
       category: z.enum(['testing', 'general', 'framework', 'database', 'frontend', 'devops', 'build', 'linting', 'tools', 'universal']).optional(),
-      displayName: z.string().optional(),
-      bundle: z.array(z.string()).optional(),
+      priority: z.number().min(1).max(5).optional(),
+      tags: z.array(z.string()).optional(),
     }
   }
 };`;
@@ -96,12 +96,12 @@ description: Minimal test agent
     it('should validate agent with all optional fields', async () => {
       const agentContent = `---
 name: full-agent
-displayName: "Full Featured Agent"
 description: A comprehensive test agent
 category: testing
 tools: "Bash, Read, Write, Edit"
 color: "blue"
-bundle: ["core", "extended"]
+priority: 3
+tags: ["core", "extended"]
 ---
 
 # Full Featured Agent
@@ -147,7 +147,7 @@ name: invalid-types
 description: Test agent
 category: "invalid-category"  # should be one of the enum values
 color: 123  # should be string
-bundle: "not an array"  # should be array
+tags: "not an array"  # should be array
 ---
 
 # Invalid Types Agent
@@ -324,24 +324,6 @@ color: "brown"
   });
 
   describe('suggestions', () => {
-    it('should suggest displayName when missing', async () => {
-      const agentContent = `---
-name: no-display-name
-description: Agent without display name
----
-
-# Agent Without Display Name
-`;
-
-      const agentPath = path.join(agentsDir, 'no-display-name.md');
-      await fs.writeFile(agentPath, agentContent);
-
-      const results = await linter.lint(tempDir, mockOptions);
-      
-      expect(results).toHaveLength(1);
-      expect(results[0].suggestions.some(sugg => sugg.includes('Consider adding displayName'))).toBe(true);
-    });
-
     it('should suggest when name does not match filename', async () => {
       const agentContent = `---
 name: different-name
@@ -358,25 +340,6 @@ description: Agent with different name
       
       expect(results).toHaveLength(1);
       expect(results[0].suggestions.some(sugg => sugg.includes('doesn\'t match filename'))).toBe(true);
-    });
-
-    it('should suggest array format for bundle field', async () => {
-      const agentContent = `---
-name: string-bundle
-description: Agent with string bundle
-bundle: "core"
----
-
-# String Bundle Agent
-`;
-
-      const agentPath = path.join(agentsDir, 'string-bundle.md');
-      await fs.writeFile(agentPath, agentContent);
-
-      const results = await linter.lint(tempDir, mockOptions);
-      
-      expect(results).toHaveLength(1);
-      expect(results[0].suggestions.some(sugg => sugg.includes('bundle field should be an array'))).toBe(true);
     });
 
     it('should detect duplicate description in content', async () => {

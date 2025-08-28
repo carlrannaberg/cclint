@@ -86,7 +86,6 @@ This is a minimal command.
 description: A comprehensive test command
 allowed-tools: "Bash, Read, Write, Edit"
 argument-hint: "<filename> [options]"
-category: workflow
 ---
 
 # Full Featured Command
@@ -131,7 +130,6 @@ Usage: Use $ARGUMENTS to pass parameters to the command.
 description: 123  # should be string
 allowed-tools: ["Bash", "Read"]  # should be string, not array
 argument-hint: 456  # should be string
-category: "invalid-category"  # should be one of enum values
 ---
 
 # Invalid Types Command

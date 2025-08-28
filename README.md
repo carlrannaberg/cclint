@@ -145,15 +145,37 @@ const commandResults = await linter.lintCommands('./my-project');
 
 ## What It Checks
 
+### Official Claude Code Fields
+
+cclint validates against the official Claude Code specifications. Any additional fields must be added via custom schema extensions.
+
+#### Agent/Subagent Frontmatter Fields
+
+**Required:**
+- `name` - Agent identifier (lowercase, alphanumeric with hyphens)
+- `description` - Natural language description of when to invoke
+
+**Optional:**
+- `tools` or `allowed-tools` - Tool access: "*" for all, or array of tool names
+- `model` - Preferred model: sonnet, opus, haiku, sonnet[1m], opusplan, inherit
+- `color` - UI color (must be one of: red, blue, green, yellow, purple, orange, pink, cyan)
+
+#### Command Frontmatter Fields
+
+**All fields are optional:**
+- `description` - Command description (defaults to first heading or line from content)
+- `allowed-tools` - Tools the command can use (string format: "Tool1, Tool2")
+- `argument-hint` - Hint for command arguments shown in UI
+- `model` - Model to use (same values as agents)
+
 ### Agent/Subagent Files (*.md with frontmatter)
 
 - ✅ Required fields: `name`, `description`
 - ✅ Tool configurations and syntax
-- ✅ Color validation (hex codes and CSS named colors)
+- ✅ Color validation (8 valid Claude Code colors: red, blue, green, yellow, purple, orange, pink, cyan)
 - ✅ Naming conventions and filename matching
-- ✅ Bundle field format validation
 - ⚠️ Unknown tools and deprecated fields
-- 💡 Missing displayName and content optimization
+- 💡 Content optimization suggestions
 
 ### Command Files (*.md with frontmatter)
 

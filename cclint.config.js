@@ -17,8 +17,8 @@ export default {
         'universal',
       ]).optional().describe('Category for grouping agents'),
       
-      displayName: z.string().optional().describe('Display name for UI'),
-      bundle: z.array(z.string()).optional().describe('Bundled subagent names'),
+      priority: z.number().min(1).max(5).optional().describe('Agent priority level'),
+      tags: z.array(z.string()).optional().describe('Agent tags for categorization'),
     }
   },
   
