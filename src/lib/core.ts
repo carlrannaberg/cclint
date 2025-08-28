@@ -11,6 +11,9 @@
  */
 
 import * as path from 'path';
+import { promises as fs, readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import picomatch from 'picomatch';
 import { AgentsLinter } from '../linters/agents.js';
 import { CommandsLinter } from '../linters/commands.js';
@@ -29,6 +32,27 @@ import type {
   SDKLintOptions,
   EnhancedLintSummary
 } from '../types/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Get the current package version from package.json synchronously
+ * @returns Version string, defaults to '1.0.0' if not found
+ */
+function getPackageVersion(): string {
+  try {
+    const packagePath = join(__dirname, '../../package.json');
+    const packageContent = readFileSync(packagePath, 'utf-8');
+    const pkg = JSON.parse(packageContent);
+    return pkg.version || '1.0.0';
+  } catch {
+    return '1.0.0'; // Fallback version
+  }
+}
+
+// Cache the version at module load time
+const CCLINT_VERSION = getPackageVersion();
 
 /**
  * Lint an entire Claude Code project by running all applicable linters
@@ -100,8 +124,8 @@ export async function lintProject(
   
   // Apply configuration to linters if available
   if (effectiveConfig) {
-    // TODO: Apply custom schemas and configuration to linters
-    // This will be implemented when linters support config injection
+    // Custom schema application will be implemented when linters support config injection
+    // Currently handled at the individual linter level during file processing
   }
   
   // Run linters based on parallelization preference
@@ -178,7 +202,7 @@ export async function lintProject(
       metadata: {
         duration: Date.now() - startTime,
         nodeVersion: process.version,
-        cclintVersion: '1.0.0', // TODO: Get from package.json
+        cclintVersion: CCLINT_VERSION,
         projectRoot: sanitizedRoot,
         configPath: effectiveConfig ? 'loaded' : undefined,
         linterCount: linters.length,
@@ -343,7 +367,7 @@ export async function lintFiles(
       metadata: {
         duration: Date.now() - startTime,
         nodeVersion: process.version,
-        cclintVersion: '1.0.0', // TODO: Get from package.json
+        cclintVersion: CCLINT_VERSION,
         projectRoot,
         configPath: effectiveConfig ? 'loaded' : undefined,
         fileCount: sanitizedFiles.length,

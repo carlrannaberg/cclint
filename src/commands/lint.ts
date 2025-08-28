@@ -75,7 +75,7 @@ export async function lintCommand(options: LintOptions): Promise<void> {
       projectRoot = process.cwd();
     }
     
-    if (!options.quiet) {
+    if (!options.quiet && options.format !== 'json') {
       console.log(`Linting Claude Code project at: ${projectRoot}`);
       spinner = ora('Running linters...').start();
     }
@@ -121,7 +121,6 @@ async function generateReports(summary: LintSummary, options: LintOptions): Prom
     case 'json':
       const jsonReporter = new JsonReporter();
       const jsonContent = jsonReporter.report(summary);
-      console.log(jsonContent);
       
       // File output (if requested)
       if (options.outputFile) {
@@ -129,13 +128,15 @@ async function generateReports(summary: LintSummary, options: LintOptions): Prom
         if (!options.quiet) {
           console.error(`📄 Report saved to: ${options.outputFile}`);
         }
+      } else {
+        // Only output to stdout if not saving to file
+        console.log(jsonContent);
       }
       break;
     
     case 'markdown':
       const markdownReporter = new MarkdownReporter();
       const markdownContent = markdownReporter.report(summary);
-      console.log(markdownContent);
       
       // File output (if requested)
       if (options.outputFile) {
@@ -143,6 +144,9 @@ async function generateReports(summary: LintSummary, options: LintOptions): Prom
         if (!options.quiet) {
           console.error(`📄 Report saved to: ${options.outputFile}`);
         }
+      } else {
+        // Only output to stdout if not saving to file
+        console.log(markdownContent);
       }
       break;
     
