@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2025-08-28
+
+### Added
+- **CLAUDE.md Size Warning**: Added warning when CLAUDE.md files exceed 40,000 characters
+  - Helps prevent context overflow issues in Claude
+  - Suggests splitting large files or removing verbose sections
+  - Proper US number formatting with commas for readability
+
+### Testing
+- Added comprehensive test coverage for CLAUDE.md linter
+- Tests for both minimum and maximum content length validation
+- Tests for proper number formatting in warning messages
+
 ## [0.2.9] - 2025-08-28
 
 ### Fixed
@@ -194,7 +207,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI interface with Commander.js
 - Security-focused path handling and input validation
 
-[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/carlrannaberg/cclint/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/carlrannaberg/cclint/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/carlrannaberg/cclint/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/carlrannaberg/cclint/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/carlrannaberg/cclint/compare/v0.2.6...v0.2.7
