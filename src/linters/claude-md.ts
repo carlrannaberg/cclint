@@ -220,6 +220,11 @@ export class ClaudeMdLinter extends BaseLinterImpl {
       this.addWarning(result, 'Document is quite short - consider adding more guidance for AI assistants');
     }
 
+    // Check maximum content length (40k characters)
+    if (content.length > 40000) {
+      this.addWarning(result, `Document is ${content.length.toLocaleString('en-US')} characters - exceeds 40k character recommendation. Consider splitting into multiple files or removing verbose sections.`);
+    }
+
     // Check for common patterns from AGENTS.md template
     this.checkCommonPatterns(content, result);
     
